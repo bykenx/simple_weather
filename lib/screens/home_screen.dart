@@ -23,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final WeatherService _weatherService = WeatherService();
   final CityService _cityService = CityService();
+  final ScrollController _scrollController = ScrollController();
   LiveWeatherModel? _weather;
   List<DailyWeatherModel>? _dailyForecast;
   List<HourlyWeatherModel>? _hourlyForecast;
@@ -30,11 +31,13 @@ class _HomeScreenState extends State<HomeScreen> {
   AirQualityModel? _airQuality;
   CityModel? _currentCity;
   bool _isLoading = false;
+  bool _isScrolling = false;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentCityWeather();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -44,7 +47,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+    
+    if (_scrollController.position.isScrollingNotifier.value) {
+      if (!_isScrolling) {
+        setState(() {
+          _isScrolling = true;
+        });
+      }
+    } else {
+      if (_isScrolling) {
+        setState(() {
+          _isScrolling = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadCurrentCityWeather({bool showOverlay = false}) async {
@@ -184,90 +206,108 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Scaffold(
             backgroundColor: Colors.blue.shade50,
-            floatingActionButton: FloatingActionButton(
-              onPressed: () async {
-                if (!await _weatherService.isApiConfigured()) {
-                  _showErrorSnackBar('请先完成API配置', showAddCity: false);
-                  return;
-                }
-                _onCityManagement();
-              },
-              child: const Icon(Icons.location_city),
+            floatingActionButton: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _isScrolling ? 0.5 : 1.0,
+              child: FloatingActionButton(
+                onPressed: () async {
+                  if (!await _weatherService.isApiConfigured()) {
+                    _showErrorSnackBar('请先完成API配置', showAddCity: false);
+                    return;
+                  }
+                  _onCityManagement();
+                },
+                child: const Icon(Icons.location_city),
+              ),
             ),
             body: RefreshIndicator(
               onRefresh: () => _loadCurrentCityWeather(showOverlay: false),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 100.0,
-                    floating: false,
-                    backgroundColor: Colors.blue.shade50,
-                    elevation: 0,
-                    flexibleSpace: FlexibleSpaceBar(
-                      title: Text(_currentCity?.name ?? ''),
-                      centerTitle: true,
-                      background: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.blue.shade200, Colors.blue.shade50],
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  if (notification is ScrollStartNotification) {
+                    setState(() {
+                      _isScrolling = true;
+                    });
+                  } else if (notification is ScrollEndNotification) {
+                    setState(() {
+                      _isScrolling = false;
+                    });
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 100.0,
+                      floating: false,
+                      backgroundColor: Colors.blue.shade50,
+                      elevation: 0,
+                      flexibleSpace: FlexibleSpaceBar(
+                        title: Text(_currentCity?.name ?? ''),
+                        centerTitle: true,
+                        background: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.blue.shade200, Colors.blue.shade50],
+                            ),
                           ),
                         ),
                       ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.settings),
+                          onPressed: () async {
+                            final result = await Navigator.pushNamed(
+                              context,
+                              AppRoutes.settings,
+                            );
+                            if (result == true) {
+                              _showSettingsUpdatedSnackBar();
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () async {
-                          final result = await Navigator.pushNamed(
-                            context,
-                            AppRoutes.settings,
-                          );
-                          if (result == true) {
-                            _showSettingsUpdatedSnackBar();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  SliverToBoxAdapter(
-                    child:
-                        _weather != null
-                            ? Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                children: [
-                                  CurrentWeatherCard(
-                                    weather: _weather!,
-                                    dailyForecast: _dailyForecast?.first,
+                    SliverToBoxAdapter(
+                      child:
+                          _weather != null
+                              ? Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    children: [
+                                      CurrentWeatherCard(
+                                        weather: _weather!,
+                                        dailyForecast: _dailyForecast?.first,
+                                      ),
+                                      if (_warnings != null &&
+                                          _warnings!.isNotEmpty) ...[
+                                        const SizedBox(height: 20),
+                                        WeatherWarningCard(warnings: _warnings!),
+                                      ],
+                                      const SizedBox(height: 20),
+                                      WeatherDetailsCard(weather: _weather!),
+                                      const SizedBox(height: 20),
+                                      if (_airQuality != null) ...[
+                                        AirQualityCard(airQuality: _airQuality!),
+                                        const SizedBox(height: 20),
+                                      ],
+                                      HourlyForecastCard(
+                                        hourlyForecast: _hourlyForecast!,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      DailyForecastCard(
+                                        dailyForecast: _dailyForecast!,
+                                      ),
+                                    ],
                                   ),
-                                  if (_warnings != null &&
-                                      _warnings!.isNotEmpty) ...[
-                                    const SizedBox(height: 20),
-                                    WeatherWarningCard(warnings: _warnings!),
-                                  ],
-                                  const SizedBox(height: 20),
-                                  WeatherDetailsCard(weather: _weather!),
-                                  const SizedBox(height: 20),
-                                  if (_airQuality != null) ...[
-                                    AirQualityCard(airQuality: _airQuality!),
-                                    const SizedBox(height: 20),
-                                  ],
-                                  HourlyForecastCard(
-                                    hourlyForecast: _hourlyForecast!,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  DailyForecastCard(
-                                    dailyForecast: _dailyForecast!,
-                                  ),
-                                ],
-                              ),
-                            )
-                            : const SizedBox.shrink(),
-                  ),
-                ],
+                                )
+                              : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
