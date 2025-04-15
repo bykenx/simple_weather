@@ -70,6 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('设置'),
+              centerTitle: true,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

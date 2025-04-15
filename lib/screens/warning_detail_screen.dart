@@ -24,6 +24,7 @@ class WarningDetailScreen extends StatelessWidget {
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(warning.typeName),
+              centerTitle: true,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

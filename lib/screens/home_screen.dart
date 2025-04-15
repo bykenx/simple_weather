@@ -202,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     elevation: 0,
                     flexibleSpace: FlexibleSpaceBar(
                       title: Text(_currentCity?.name ?? ''),
+                      centerTitle: true,
                       background: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(

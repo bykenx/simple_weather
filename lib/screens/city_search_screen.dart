@@ -121,6 +121,7 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('添加城市'),
+              centerTitle: true,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

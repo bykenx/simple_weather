@@ -59,6 +59,7 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('城市管理'),
+              centerTitle: true,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

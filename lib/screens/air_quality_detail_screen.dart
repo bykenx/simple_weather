@@ -43,6 +43,7 @@ class AirQualityDetailScreen extends StatelessWidget {
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('空气质量'),
+              centerTitle: true,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
