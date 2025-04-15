@@ -54,6 +54,16 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    if (!await _weatherService.isApiConfigured()) {
+      _showErrorSnackBar('请先完成API配置', showAddCity: false);
+      if (showOverlay) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     final currentCity = await _cityService.getCurrentCity();
     if (currentCity == null) {
       _showErrorSnackBar('请先添加城市', showAddCity: true);
@@ -66,16 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      if (!await _weatherService.isApiConfigured()) {
-        _showErrorSnackBar('请先完成API配置', showAddCity: false);
-        if (showOverlay) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
       final results = await Future.wait<dynamic>([
         _weatherService.getLiveWeather(
           lat: currentCity.lat!,
@@ -129,6 +129,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showErrorSnackBar(String message, {bool showAddCity = false}) {
     if (!mounted) return;
+    
+    // 移除当前显示的 SnackBar
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
