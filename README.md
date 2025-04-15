@@ -88,6 +88,63 @@ flutter pub run flutter_launcher_icons
 flutter run
 ```
 
+## 构建发布版本
+
+### Android 构建
+
+1. 配置签名环境变量
+```bash
+# 在 ~/.zshrc 或 ~/.bash_profile 中添加以下环境变量
+export KEYSTORE_PASSWORD=your_keystore_password
+export KEY_PASSWORD=your_key_password
+```
+
+2. 生成签名密钥（如果尚未生成）
+```bash
+keytool -genkey -v \
+  -keystore android/app/keystore/release.keystore \
+  -alias release \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000 \
+  -storepass your_store_password \
+  -keypass your_key_password
+```
+
+3. 构建发布版本
+```bash
+# 构建所有架构的 APK
+flutter build apk --split-per-abi
+
+# 构建特定架构的 APK
+flutter build apk --target-platform android-arm64
+```
+
+构建完成后，APK 文件将位于以下位置：
+- `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`
+- `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
+- `build/app/outputs/flutter-apk/app-x86_64-release.apk`
+
+### iOS 构建
+
+1. 打开 Xcode 项目
+```bash
+open ios/Runner.xcworkspace
+```
+
+2. 在 Xcode 中配置签名
+- 选择 Runner 项目
+- 选择 Runner target
+- 在 "Signing & Capabilities" 标签页中：
+  - 选择开发者账号
+  - 设置 Bundle Identifier
+  - 选择 Provisioning Profile
+
+3. 构建发布版本
+```bash
+flutter build ios --release
+```
+
 ## API 说明
 
 本项目使用和风天气 API 提供以下服务：
