@@ -9,6 +9,14 @@ class HourlyForecastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final currentHour = now.hour;
+    
+    // 过滤掉当前时间之前的数据
+    final filteredForecast = hourlyForecast.where((hour) {
+      return hour.time.hour >= currentHour;
+    }).toList();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.7),
@@ -32,16 +40,18 @@ class HourlyForecastCard extends StatelessWidget {
                   height: 100,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: hourlyForecast.length,
+                    itemCount: filteredForecast.length,
                     itemBuilder: (context, index) {
-                      final hour = hourlyForecast[index];
+                      final hour = filteredForecast[index];
+                      final isCurrentHour = hour.time.hour == currentHour;
+                      
                       return Container(
                         width: 80,
                         margin: const EdgeInsets.only(right: 16),
                         child: Column(
                           children: [
                             Text(
-                              '${hour.time.hour}:00',
+                              isCurrentHour ? '现在' : '${hour.time.hour}:00',
                               style: const TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 8),
