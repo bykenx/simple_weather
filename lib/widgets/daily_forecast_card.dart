@@ -17,60 +17,64 @@ class DailyForecastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          AppRoutes.extendedForecast,
-          arguments: currentCity,
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.7),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.extendedForecast,
+              arguments: currentCity,
+            );
+          },
           borderRadius: BorderRadius.circular(15),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...List.generate(3, (index) {
-                final day = dailyForecast[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          WeatherDateUtils.getDayText(index),
-                          style: const TextStyle(fontSize: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...List.generate(3, (index) {
+                  final day = dailyForecast[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            WeatherDateUtils.getDayText(index),
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ),
-                      ),
-                      Icon(
-                        WeatherIconUtils.getWeatherIcon(day.icon),
-                        size: 18,
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          day.description,
-                          style: const TextStyle(fontSize: 16),
+                        Icon(
+                          WeatherIconUtils.getWeatherIcon(day.icon),
+                          size: 18,
+                          color: Colors.blue,
                         ),
-                      ),
-                      Text(
-                        '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            day.description,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
+                        Text(
+                          '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
         ),
       ),
