@@ -1,5 +1,6 @@
 import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
+import 'package:simple_weather/models/forecast_days.dart';
 import 'package:simple_weather/services/http_service.dart';
 import 'package:simple_weather/services/settings_service.dart';
 
@@ -103,6 +104,7 @@ class WeatherService {
     double? lat,
     double? lon,
     String? locationId,
+    ForecastDays forecastDays = ForecastDays.three,
   }) async {
     if (!await isApiConfigured()) {
       throw '请先完成API配置';
@@ -112,7 +114,7 @@ class WeatherService {
       final apiKey = await _getApiKey();
       final apiHost = await _getApiHost();
       final response = await _httpService.get(
-        'https://$apiHost/v7/weather/7d',
+        'https://$apiHost/v7/weather/${forecastDays.apiSuffix}',
         queryParameters: {'location': '$lon,$lat', 'key': apiKey},
       );
 

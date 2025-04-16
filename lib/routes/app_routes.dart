@@ -5,8 +5,10 @@ import 'package:simple_weather/screens/home_screen.dart';
 import 'package:simple_weather/screens/settings_screen.dart';
 import 'package:simple_weather/screens/warning_detail_screen.dart';
 import 'package:simple_weather/screens/air_quality_detail_screen.dart';
+import 'package:simple_weather/screens/extended_forecast_screen.dart';
 import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
+import 'package:simple_weather/models/city_model.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -15,6 +17,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String warningDetail = '/warning-detail';
   static const String airQualityDetail = '/air-quality-detail';
+  static const String extendedForecast = '/extended-forecast';
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -37,6 +40,11 @@ class AppRoutes {
         final airQuality = routeSettings.arguments as AirQualityModel;
         return MaterialPageRoute(
           builder: (_) => AirQualityDetailScreen(airQuality: airQuality),
+        );
+      case extendedForecast:
+        final currentCity = routeSettings.arguments as CityModel;
+        return MaterialPageRoute(
+          builder: (_) => ExtendedForecastScreen(currentCity: currentCity),
         );
       default:
         return MaterialPageRoute(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
 import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/models/weather_model.dart';
+import 'package:simple_weather/models/forecast_days.dart';
 import 'package:simple_weather/routes/app_routes.dart';
 import 'package:simple_weather/services/city_service.dart';
 import 'package:simple_weather/services/weather_service.dart';
@@ -53,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onScroll() {
     if (!mounted) return;
-    
+
     if (_scrollController.position.isScrollingNotifier.value) {
       if (!_isScrolling) {
         setState(() {
@@ -106,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _weatherService.getWeatherForecast(
           lat: currentCity.lat!,
           lon: currentCity.lon!,
+          forecastDays: ForecastDays.three,
         ),
         _weatherService.getHourlyWeather(
           lat: currentCity.lat!,
@@ -151,10 +153,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showErrorSnackBar(String message, {bool showAddCity = false}) {
     if (!mounted) return;
-    
+
     // 移除当前显示的 SnackBar
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -251,7 +253,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Colors.blue.shade200, Colors.blue.shade50],
+                              colors: [
+                                Colors.blue.shade200,
+                                Colors.blue.shade50,
+                              ],
                             ),
                           ),
                         ),
@@ -275,35 +280,36 @@ class _HomeScreenState extends State<HomeScreen> {
                       child:
                           _weather != null
                               ? Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    children: [
-                                      CurrentWeatherCard(
-                                        weather: _weather!,
-                                        dailyForecast: _dailyForecast?.first,
-                                      ),
-                                      if (_warnings != null &&
-                                          _warnings!.isNotEmpty) ...[
-                                        const SizedBox(height: 20),
-                                        WeatherWarningCard(warnings: _warnings!),
-                                      ],
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  children: [
+                                    CurrentWeatherCard(
+                                      weather: _weather!,
+                                      dailyForecast: _dailyForecast?.first,
+                                    ),
+                                    if (_warnings != null &&
+                                        _warnings!.isNotEmpty) ...[
                                       const SizedBox(height: 20),
-                                      WeatherDetailsCard(weather: _weather!),
-                                      const SizedBox(height: 20),
-                                      if (_airQuality != null) ...[
-                                        AirQualityCard(airQuality: _airQuality!),
-                                        const SizedBox(height: 20),
-                                      ],
-                                      HourlyForecastCard(
-                                        hourlyForecast: _hourlyForecast!,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      DailyForecastCard(
-                                        dailyForecast: _dailyForecast!,
-                                      ),
+                                      WeatherWarningCard(warnings: _warnings!),
                                     ],
-                                  ),
-                                )
+                                    const SizedBox(height: 20),
+                                    WeatherDetailsCard(weather: _weather!),
+                                    const SizedBox(height: 20),
+                                    if (_airQuality != null) ...[
+                                      AirQualityCard(airQuality: _airQuality!),
+                                      const SizedBox(height: 20),
+                                    ],
+                                    HourlyForecastCard(
+                                      hourlyForecast: _hourlyForecast!,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    DailyForecastCard(
+                                      dailyForecast: _dailyForecast!,
+                                      currentCity: _currentCity!,
+                                    ),
+                                  ],
+                                ),
+                              )
                               : const SizedBox.shrink(),
                     ),
                   ],
