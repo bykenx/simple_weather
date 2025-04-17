@@ -8,7 +8,7 @@ import 'package:simple_weather/routes/app_routes.dart';
 import 'package:simple_weather/services/city_service.dart';
 import 'package:simple_weather/services/weather_service.dart';
 import 'package:simple_weather/widgets/air_quality_card.dart';
-import 'package:simple_weather/widgets/current_weather_card.dart';
+import 'package:simple_weather/widgets/current_weather_info.dart';
 import 'package:simple_weather/widgets/daily_forecast_card.dart';
 import 'package:simple_weather/widgets/hourly_forecast_card.dart';
 import 'package:simple_weather/widgets/weather_details_card.dart';
@@ -283,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
                                   children: [
-                                    CurrentWeatherCard(
+                                    CurrentWeatherInfo(
                                       weather: _weather!,
                                       dailyForecast: _dailyForecast?.first,
                                     ),
