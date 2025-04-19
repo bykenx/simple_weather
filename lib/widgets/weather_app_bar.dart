@@ -32,44 +32,26 @@ class WeatherAppBar extends StatelessWidget {
       elevation: 0,
       title: null,
       flexibleSpace: LayoutBuilder(
-        builder: (
-          BuildContext context,
-          BoxConstraints constraints,
-        ) {
-          // 获取当前 FlexibleSpaceBar 的高度
+        builder: (BuildContext context, BoxConstraints constraints) {
           final double currentExtent = constraints.biggest.height;
-          // 计算 FlexibleSpaceBar 高度的百分比（从完全展开到完全折叠）
           final double deltaExtent =
               MediaQuery.of(context).padding.top + kToolbarHeight;
           final double scrollPercent =
-              (constraints.maxHeight - currentExtent) /
-                  (constraints.maxHeight - deltaExtent);
+              1 - (currentExtent - deltaExtent) / (420 - deltaExtent);
 
-          // 使用更渐进的不透明度变化计算
-          // 在滚动的前60%不改变不透明度，之后快速改变
-          final double titleOpacity = scrollPercent < 0.6
-              ? 0.0
-              : ((scrollPercent - 0.6) / 0.4).clamp(
-                  0.0,
-                  1.0,
-                );
-
-          // 反向计算内容的不透明度
-          final double contentOpacity = 1.0 - titleOpacity;
+          var titleOpacity =
+              scrollPercent < 0.5 ? 0.0 : (scrollPercent - 0.5) / 0.5;
+          var contentOpacity = scrollPercent < 0.5 ? 1 - scrollPercent : 0.0;
 
           return FlexibleSpaceBar(
             collapseMode: CollapseMode.pin,
             centerTitle: true,
             title: AnimatedOpacity(
               opacity: titleOpacity,
-              duration: const Duration(
-                milliseconds: 150,
-              ),
+              duration: const Duration(milliseconds: 150),
               child: Text(
                 cityName ?? '',
-                style: const TextStyle(
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(color: Colors.black87),
               ),
             ),
             background: Container(
@@ -77,33 +59,27 @@ class WeatherAppBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.blue.shade200,
-                    Colors.blue.shade50,
-                  ],
+                  colors: [Colors.blue.shade200, Colors.blue.shade50],
                 ),
               ),
-              child: weather != null
-                  ? AnimatedOpacity(
-                      opacity: contentOpacity,
-                      duration: const Duration(
-                        milliseconds: 150,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                          top: 100,
+              child:
+                  weather != null
+                      ? AnimatedOpacity(
+                        opacity: contentOpacity,
+                        duration: const Duration(milliseconds: 150),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 100),
+                          child: CurrentCityWeather(
+                            cityName: cityName ?? '',
+                            weather: weather!,
+                            dailyForecast: dailyForecast,
+                            currentIndex: currentCityIndex,
+                            totalCities: totalCities,
+                            pageController: pageController,
+                          ),
                         ),
-                        child: CurrentCityWeather(
-                          cityName: cityName ?? '',
-                          weather: weather!,
-                          dailyForecast: dailyForecast,
-                          currentIndex: currentCityIndex,
-                          totalCities: totalCities,
-                          pageController: pageController,
-                        ),
-                      ),
-                    )
-                  : SizedBox.shrink(),
+                      )
+                      : SizedBox.shrink(),
             ),
           );
         },
@@ -116,4 +92,4 @@ class WeatherAppBar extends StatelessWidget {
       ],
     );
   }
-} 
+}
