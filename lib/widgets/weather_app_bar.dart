@@ -25,7 +25,7 @@ class WeatherAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 320.0,
+      expandedHeight: 400.0,
       floating: false,
       pinned: true,
       backgroundColor: Colors.blue.shade50,
