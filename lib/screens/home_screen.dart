@@ -26,15 +26,20 @@ class _HomeScreenState extends State<HomeScreen> {
   final WeatherService _weatherService = WeatherService();
   final CityService _cityService = CityService();
   final SettingsService _settingsService = SettingsService();
-  CityModel? _currentCity;
   bool _isLoading = false;
   bool _isScrolling = false;
   bool _isSettingsComplete = false;
 
+  // 页面滑动处理
+  bool _handleSwipe = true;
+  double _swipeStartX = 0.0;
+  double _swipeDelta = 0.0;
+  final double _dragThreshold = 100.0;
+
   // 城市相关变量
   List<CityModel> _cities = [];
   int _cityIndex = 0;
-  List<CityWeatherData> _cityWeatherDataList = [];
+  final Map<String, CityWeatherData> _cityWeatherDataMap = {};
   PageController _pageController = PageController();
 
   @override
@@ -61,24 +66,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _cities = cities;
-      _cityWeatherDataList =
-          cities.map((city) => CityWeatherData(city)).toList();
     });
 
     // 设置当前选中的城市索引
     if (currentCity != null) {
-      final index = cities.indexWhere(
-        (city) => city.id == currentCity.id && city.name == currentCity.name,
-      );
+      final index = cities.indexWhere((city) => city == currentCity);
       if (index != -1) {
         setState(() {
           _cityIndex = index;
         });
-        _pageController = PageController(initialPage: _cityIndex);
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_cityIndex);
+        } else {
+          _pageController = PageController(initialPage: _cityIndex);
+        }
       }
     }
 
-    _loadCityWeather(_cityIndex, showOverlay: false);
+    _loadCityWeather(_cities[_cityIndex]);
   }
 
   Future<void> _loadSettings() async {
@@ -87,13 +92,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 加载指定城市的天气数据
-  Future<void> _loadCityWeather(
-    int cityIndex, {
-    bool showOverlay = false,
-  }) async {
-    if (cityIndex < 0 || cityIndex >= _cityWeatherDataList.length) return;
+  Future<void> _loadCityWeather(CityModel city, {bool? showOverlay}) async {
+    if (!_cityWeatherDataMap.containsKey(city.uniqueName)) {
+      _cityWeatherDataMap[city.uniqueName] = CityWeatherData(city);
+    }
 
-    final cityData = _cityWeatherDataList[cityIndex];
+    final cityData = _cityWeatherDataMap[city.uniqueName]!;
+
+    showOverlay = showOverlay ?? !cityData.hasData;
 
     if (showOverlay) {
       setState(() {
@@ -103,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (!await _weatherService.isApiConfigured()) {
-      _showErrorSnackBar('请先完成API配置', showAddCity: false);
+      _showErrorSnackBar('请先完成API配置', showToSettings: true);
       if (showOverlay) {
         setState(() {
           cityData.isLoading = false;
@@ -112,8 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
-
-    final city = cityData.city;
 
     try {
       final results = await Future.wait<dynamic>([
@@ -144,19 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
         cityData.isLoading = false;
 
         // 更新当前页面的数据
-        if (cityIndex == _cityIndex) {
-          _currentCity = city;
-          // 只有在显示遮罩时才设置 _isLoading 为 false
-          if (showOverlay) {
-            _isLoading = false;
-          }
+        if (city == _cities[_cityIndex] && showOverlay == true) {
+          _isLoading = false;
         }
       });
     } catch (e) {
       if (kDebugMode) {
         print(e);
       }
-      _showErrorSnackBar(e.toString(), showAddCity: false);
+      _showErrorSnackBar(e.toString());
       if (showOverlay) {
         setState(() {
           cityData.isLoading = false;
@@ -166,27 +166,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadCurrentCityWeather({bool showOverlay = false}) async {
-    return _loadCityWeather(_cityIndex, showOverlay: showOverlay);
+  Future<void> _loadCurrentCityWeather({bool? showOverlay}) async {
+    if (_cities.isEmpty || _cityIndex >= _cities.length) return;
+    return _loadCityWeather(_cities[_cityIndex], showOverlay: showOverlay);
   }
 
   // 页面切换回调
   void _onPageChanged(int index) {
-    final cityData = _cityWeatherDataList[index];
+    if (index < 0 || index >= _cities.length) return;
+
+    final city = _cities[index];
+    final cityData = _cityWeatherDataMap[city.uniqueName];
+
     setState(() {
       _cityIndex = index;
-      _currentCity = cityData.city;
-      _isLoading = cityData.isLoading;
+      if (cityData != null) {
+        _isLoading = cityData.isLoading;
+      }
     });
 
-    _cityService.setCurrentCity(_cities[index]);
-    if (cityData.isExpired || !cityData.hasData) {
-      _loadCityWeather(index, showOverlay: !cityData.hasData);
+    _cityService.setCurrentCity(city);
+    if (cityData?.isExpired == true || cityData?.hasData != true) {
+      _loadCityWeather(city);
     }
   }
 
   // 显示错误提示
-  void _showErrorSnackBar(String message, {bool showAddCity = false}) {
+  void _showErrorSnackBar(String message, {bool showToSettings = false}) {
     if (!mounted) return;
 
     // 移除当前显示的 SnackBar
@@ -195,16 +201,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        action: SnackBarAction(
-          label: showAddCity ? '添加城市' : '去设置',
-          onPressed: () {
-            if (showAddCity) {
-              _onCityManagement();
-            } else {
-              _onSettingsPressed();
-            }
-          },
-        ),
+        action:
+            showToSettings
+                ? SnackBarAction(label: '去设置', onPressed: _onSettingsPressed)
+                : null,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -213,12 +213,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 城市管理
   void _onCityManagement() async {
-    final currentCity = _currentCity;
     await Navigator.pushNamed(context, AppRoutes.cityManagement);
-    final newCity = await _cityService.getCurrentCity();
-    if (newCity?.id != currentCity?.id) {
-      _loadCurrentCityWeather(showOverlay: true);
-    }
+    _loadCities();
   }
 
   // 设置按钮点击回调
@@ -235,87 +231,191 @@ class _HomeScreenState extends State<HomeScreen> {
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
         if (ModalRoute.of(context)?.settings.name == '/settings') {
-          await _loadCurrentCityWeather(showOverlay: true);
+          await _loadCurrentCityWeather();
         }
       },
       child: Stack(
         children: [
-          Scaffold(
-            backgroundColor: Colors.blue.shade50,
-            floatingActionButton:
-                _cities.isEmpty
-                    ? null
-                    : AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: _isScrolling ? 0.5 : 1.0,
-                      child: FloatingActionButton(
-                        onPressed: _onCityManagement,
-                        tooltip: '城市管理',
-                        child: const Icon(Icons.location_city),
-                      ),
-                    ),
-            body:
-                !_isSettingsComplete
-                    ? SettingNotCompleteView(onSettings: _onSettingsPressed)
-                    : _cities.isEmpty
-                    ? EmptyCityView(onAddCity: _onCityManagement)
-                    : NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification notification) {
-                        if (notification is ScrollStartNotification) {
-                          setState(() {
-                            _isScrolling = true;
-                          });
-                        } else if (notification is ScrollEndNotification) {
-                          setState(() {
-                            _isScrolling = false;
-                          });
-                        }
-                        return false;
-                      },
-                      child: NestedScrollView(
-                        headerSliverBuilder: (context, innerBoxIsScrolled) {
-                          final currentCityData =
-                              _cityIndex < _cityWeatherDataList.length
-                                  ? _cityWeatherDataList[_cityIndex]
-                                  : null;
+          GestureDetector(
+            onHorizontalDragStart: (details) {
+              // 如果没有城市或只有一个城市，不处理滑动
+              if (_cities.isEmpty || _cities.length <= 1) {
+                return;
+              }
+              setState(() {
+                _swipeStartX = details.localPosition.dx;
+                _swipeDelta = 0.0;
+                _handleSwipe = true;
+              });
+            },
+            onHorizontalDragUpdate: (details) {
+              // 如果不处理滑动，直接返回
+              if (!_handleSwipe) return;
 
-                          return [
-                            WeatherAppBar(
-                              weather: currentCityData?.weather,
-                              dailyForecast:
-                                  currentCityData?.dailyForecast?.first,
-                              cityName: currentCityData?.city.name,
-                              currentCityIndex: _cityIndex,
-                              totalCities: _cities.length,
-                              pageController: _pageController,
-                              onSettingsPressed: _onSettingsPressed,
-                            ),
-                          ];
-                        },
-                        body: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: _onPageChanged,
-                          itemCount: _cities.length,
-                          itemBuilder: (context, index) {
-                            final cityData = _cityWeatherDataList[index];
+              // 计算水平滑动距离
+              _swipeDelta = details.localPosition.dx - _swipeStartX;
 
-                            if (cityData.weather == null) {
-                              return const SizedBox.shrink();
-                            }
+              // 判断是否应该处理为水平滑动
+              double verticalDelta =
+                  (details.localPosition.dy - details.globalPosition.dy).abs();
+              double horizontalDelta = _swipeDelta.abs();
 
-                            return WeatherContentView(
-                              weather: cityData.weather!,
-                              dailyForecast: cityData.dailyForecast,
-                              hourlyForecast: cityData.hourlyForecast,
-                              warnings: cityData.warnings,
-                              airQuality: cityData.airQuality,
-                              city: cityData.city,
-                              onRefresh: () => _loadCurrentCityWeather(),
-                            );
-                          },
+              // 如果垂直滑动距离大于水平滑动距离的1.2倍，不处理水平滑动
+              if (verticalDelta > horizontalDelta * 1.2 &&
+                  horizontalDelta < 20) {
+                setState(() {
+                  _handleSwipe = false;
+                });
+                return;
+              }
+
+              // 直接控制PageView的滚动位置实现过渡效果
+              if (_pageController.hasClients) {
+                final currentOffset = _pageController.offset;
+                final targetOffset = currentOffset - details.delta.dx;
+
+                // 确保不超出边界
+                final maxOffset =
+                    MediaQuery.of(context).size.width * (_cities.length - 1);
+                final boundedOffset = targetOffset.clamp(0.0, maxOffset);
+
+                // 直接设置滚动位置
+                _pageController.position.jumpTo(boundedOffset);
+              }
+            },
+            onHorizontalDragEnd: (details) {
+              // 如果不处理滑动，直接返回
+              if (!_handleSwipe) return;
+
+              double velocity = details.primaryVelocity ?? 0;
+              double currentPage =
+                  _pageController.page ?? _cityIndex.toDouble();
+
+              // 根据滑动距离和速度决定是否切换页面
+              if (_swipeDelta.abs() > _dragThreshold || velocity.abs() > 100) {
+                int targetPage;
+
+                if (_swipeDelta > 0 || velocity > 100) {
+                  // 向右滑动，显示上一个城市
+                  targetPage = currentPage.floor();
+                  if (targetPage == currentPage && targetPage > 0) {
+                    targetPage -= 1;
+                  }
+                } else {
+                  // 向左滑动，显示下一个城市
+                  targetPage = currentPage.ceil();
+                  if (targetPage == currentPage &&
+                      targetPage < _cities.length - 1) {
+                    targetPage += 1;
+                  }
+                }
+
+                // 确保目标页面在有效范围内
+                targetPage = targetPage.clamp(0, _cities.length - 1);
+
+                // 平滑切换到目标页面
+                _pageController.animateToPage(
+                  targetPage,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                );
+              } else {
+                // 回弹到当前页面
+                _pageController.animateToPage(
+                  currentPage.round(),
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                );
+              }
+            },
+            child: Scaffold(
+              backgroundColor: Colors.blue.shade50,
+              floatingActionButton:
+                  _cities.isEmpty
+                      ? null
+                      : AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: _isScrolling ? 0.5 : 1.0,
+                        child: FloatingActionButton(
+                          onPressed: _onCityManagement,
+                          tooltip: '城市管理',
+                          child: const Icon(Icons.location_city),
                         ),
                       ),
-                    ),
+              body:
+                  !_isSettingsComplete
+                      ? SettingNotCompleteView(onSettings: _onSettingsPressed)
+                      : _cities.isEmpty
+                      ? EmptyCityView(onAddCity: _onCityManagement)
+                      : NotificationListener<ScrollNotification>(
+                        onNotification: (ScrollNotification notification) {
+                          if (notification is ScrollStartNotification) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                _isScrolling = true;
+                              });
+                            });
+                          } else if (notification is ScrollEndNotification) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                _isScrolling = false;
+                              });
+                            });
+                          }
+                          return false;
+                        },
+                        child: NestedScrollView(
+                          headerSliverBuilder: (context, innerBoxIsScrolled) {
+                            final currentCity = _cities[_cityIndex];
+                            final currentCityData =
+                                _cityWeatherDataMap[currentCity.uniqueName];
+
+                            return [
+                              WeatherAppBar(
+                                weather: currentCityData?.weather,
+                                dailyForecast:
+                                    currentCityData?.dailyForecast?.first,
+                                cityName: currentCityData?.city.name,
+                                currentCityIndex: _cityIndex,
+                                totalCities: _cities.length,
+                                pageController: _pageController,
+                                onSettingsPressed: _onSettingsPressed,
+                              ),
+                            ];
+                          },
+                          body: PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: _onPageChanged,
+                            itemCount: _cities.length,
+                            physics:
+                                const BouncingScrollPhysics(), // 使用支持回弹效果的滚动物理
+                            itemBuilder: (context, index) {
+                              if (index < 0 || index >= _cities.length) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final city = _cities[index];
+                              final cityData =
+                                  _cityWeatherDataMap[city.uniqueName];
+
+                              if (cityData?.weather == null) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return WeatherContentView(
+                                weather: cityData!.weather!,
+                                dailyForecast: cityData.dailyForecast,
+                                hourlyForecast: cityData.hourlyForecast,
+                                warnings: cityData.warnings,
+                                airQuality: cityData.airQuality,
+                                city: city,
+                                onRefresh: () => _loadCurrentCityWeather(),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+            ),
           ),
           LoadingOverlay(isLoading: _isLoading),
         ],

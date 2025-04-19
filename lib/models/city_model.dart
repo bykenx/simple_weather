@@ -40,4 +40,14 @@ class CityModel {
       'lon': lon?.toString(),
     };
   }
-} 
+
+  String get uniqueName => '$id-$name';
+
+  @override
+  bool operator ==(Object other) {
+    return other is CityModel && other.id == id && other.name == name;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
+}
