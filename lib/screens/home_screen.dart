@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final WeatherService _weatherService = WeatherService();
   final CityService _cityService = CityService();
   final SettingsService _settingsService = SettingsService();
@@ -45,14 +45,38 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadCities();
     _loadSettings();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // 应用从后台切换到前台时，检查当前城市的天气数据是否过期
+      _checkAndRefreshWeatherData();
+    }
+  }
+  
+  // 检查并刷新天气数据
+  Future<void> _checkAndRefreshWeatherData() async {
+    if (_cities.isEmpty || _cityIndex >= _cities.length) return;
+    
+    final city = _cities[_cityIndex];
+    final cityData = _cityWeatherDataMap[city.uniqueName];
+    
+    // 如果数据已过期（1小时未刷新），则更新天气数据
+    if (cityData?.isExpired == true) {
+      await _loadCityWeather(city, showOverlay: false);
+    }
   }
 
   // 加载城市列表
