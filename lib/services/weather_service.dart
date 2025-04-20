@@ -11,7 +11,10 @@ class WeatherService {
   Future<bool> isApiConfigured() async {
     final apiKey = await _settingsService.getApiKey();
     final apiHost = await _settingsService.getApiHost();
-    return apiKey != null && apiKey.isNotEmpty && apiHost != null && apiHost.isNotEmpty;
+    return apiKey != null &&
+        apiKey.isNotEmpty &&
+        apiHost != null &&
+        apiHost.isNotEmpty;
   }
 
   Future<String> _getApiKey() async {
@@ -167,10 +170,8 @@ class WeatherService {
       final apiHost = await _getApiHost();
       final response = await _httpService.get(
         'https://$apiHost/v7/warning/now',
-        queryParameters: {
-          'location': '$lon,$lat',
-          'key': apiKey,
-        },
+        queryParameters: {'location': '$lon,$lat', 'key': apiKey},
+        handleErrorResponse: true,
       );
 
       if (response.data['code'] == '200') {
@@ -179,6 +180,16 @@ class WeatherService {
           return (data['warning'] as List)
               .map((item) => WeatherWarningModel.fromJson(item))
               .toList();
+        }
+      } else if (response.data.containsKey('error')) {
+        // 处理数据不可用的情况
+        final error = response.data['error'];
+        if (error is Map<String, dynamic> &&
+            error.containsKey('type') &&
+            (error['type'].toString().contains('data-not-available') ||
+                error['title'] == 'Data Not Available')) {
+          // 地区不支持预警数据，返回空列表，而不抛出异常
+          return [];
         }
       }
       return [];
@@ -205,7 +216,6 @@ class WeatherService {
       // 处理API返回的JSON结构，提取需要的部分
       final responseData = response.data;
       final airQualityData = extractAirQualityData(responseData);
-      
       return AirQualityModel.fromJson(airQualityData);
     } catch (e) {
       rethrow;
