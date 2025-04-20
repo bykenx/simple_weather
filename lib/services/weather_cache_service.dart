@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
 import 'package:simple_weather/models/city_model.dart';
@@ -35,7 +37,9 @@ class WeatherCacheService {
       await prefs.setString('${_weatherCacheKey}_$cityKey', jsonEncode(cacheData));
     } catch (e) {
       // 忽略缓存错误
-      print('缓存保存错误: $e');
+      if (kDebugMode) {
+        print('缓存保存错误: $e');
+      }
     }
   }
 
@@ -95,7 +99,9 @@ class WeatherCacheService {
       return weatherData;
     } catch (e) {
       // 如果解析缓存数据出错，返回null
-      print('缓存加载错误: $e');
+      if (kDebugMode) {
+        print('缓存加载错误: $e');
+      }
       return null;
     }
   }

@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'package:simple_weather/models/weather_model.dart';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/models/forecast_days.dart';
-import 'package:simple_weather/utils/weather_icon_utils.dart';
-import 'package:simple_weather/utils/date_utils.dart';
+import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/services/weather_service.dart';
-import 'package:simple_weather/services/weather_cache_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:simple_weather/utils/date_utils.dart';
+import 'package:simple_weather/utils/weather_icon_utils.dart';
 
 class ExtendedForecastScreen extends StatefulWidget {
   final CityModel currentCity;
@@ -21,7 +21,6 @@ class ExtendedForecastScreen extends StatefulWidget {
 
 class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   final WeatherService _weatherService = WeatherService();
-  final WeatherCacheService _weatherCacheService = WeatherCacheService();
   static const String _extendedForecastCacheKey = 'extended_forecast_cache';
   static const Duration _cacheExpiry = Duration(hours: 6); // 6小时过期
   
