@@ -23,7 +23,7 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   final WeatherService _weatherService = WeatherService();
   static const String _extendedForecastCacheKey = 'extended_forecast_cache';
   static const Duration _cacheExpiry = Duration(hours: 6); // 6小时过期
-  
+
   List<DailyWeatherModel>? _dailyForecast;
   bool _isLoading = true;
   DateTime? _lastUpdated;
@@ -44,7 +44,7 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   Future<void> _loadExtendedForecastWithCache() async {
     // 尝试从缓存加载数据
     await _loadFromCache();
-    
+
     // 如果缓存不存在或已过期，从网络加载
     if (_dailyForecast == null || _isCacheExpired()) {
       await _loadExtendedForecast();
@@ -59,22 +59,30 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   Future<void> _loadFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
+      final cacheKey =
+          '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
       final cacheJson = prefs.getString(cacheKey);
-      
+
       if (cacheJson != null && cacheJson.isNotEmpty) {
         final cacheData = Map<String, dynamic>.from(jsonDecode(cacheJson));
-        
+
         setState(() {
-          _lastUpdated = DateTime.fromMillisecondsSinceEpoch(cacheData['lastUpdated']);
-          
+          _lastUpdated = DateTime.fromMillisecondsSinceEpoch(
+            cacheData['lastUpdated'],
+          );
+
           if (cacheData['forecast'] != null) {
-            _dailyForecast = (cacheData['forecast'] as List)
-                .map((item) => DailyWeatherModel.fromJson(Map<String, dynamic>.from(item)))
-                .toList();
+            _dailyForecast =
+                (cacheData['forecast'] as List)
+                    .map(
+                      (item) => DailyWeatherModel.fromJson(
+                        Map<String, dynamic>.from(item),
+                      ),
+                    )
+                    .toList();
           }
         });
-        
+
         if (kDebugMode) {
           print('从缓存加载15天天气预报');
         }
@@ -90,18 +98,19 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   // 将数据保存到缓存
   Future<void> _saveToCache() async {
     if (_dailyForecast == null) return;
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
-      
+      final cacheKey =
+          '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
+
       final cacheData = {
         'lastUpdated': DateTime.now().millisecondsSinceEpoch,
         'forecast': _dailyForecast!.map((item) => item.toJson()).toList(),
       };
-      
+
       await prefs.setString(cacheKey, jsonEncode(cacheData));
-      
+
       if (kDebugMode) {
         print('已保存15天天气预报到缓存');
       }
@@ -141,7 +150,7 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
           _lastUpdated = DateTime.now();
           _isLoading = false;
         });
-        
+
         // 保存到缓存
         _saveToCache();
       }
@@ -189,68 +198,65 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                 ),
                 SliverToBoxAdapter(
                   child:
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : Padding(
+                      !_isLoading && _dailyForecast != null
+                          ? Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
-                              children: List.generate(
-                                _dailyForecast?.length ?? 0,
-                                (index) {
-                                  final day = _dailyForecast![index];
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.7,
-                                      ),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              WeatherDateUtils.getDayText(
-                                                index,
-                                              ),
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ),
-                                          Icon(
-                                            WeatherIconUtils.getWeatherIcon(
-                                              day.icon,
-                                            ),
-                                            size: 24,
-                                            color: Colors.blue,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Text(
-                                              day.description,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
+                              children: List.generate(_dailyForecast!.length, (
+                                index,
+                              ) {
+                                final day = _dailyForecast![index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            WeatherDateUtils.getFormattedDateText(day.date),
                                             style: const TextStyle(
                                               fontSize: 16,
-                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                        Icon(
+                                          WeatherIconUtils.getWeatherIcon(
+                                            day.icon,
+                                          ),
+                                          size: 24,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            day.description,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              }),
                             ),
-                          ),
+                          )
+                          : const SizedBox(height: 300), // 预留加载空间
                 ),
               ],
             ),

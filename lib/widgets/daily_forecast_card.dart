@@ -46,7 +46,7 @@ class DailyForecastCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            WeatherDateUtils.getDayText(index),
+                            WeatherDateUtils.getDateText(day.date),
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
