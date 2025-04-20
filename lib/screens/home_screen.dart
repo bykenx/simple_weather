@@ -268,8 +268,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     });
 
-    _cityService.setCurrentCity(city);
-
     // 如果数据无效，直接从网络加载，不再检查缓存
     if (!_isValidData(cityData)) {
       _loadCityWeather(city);
