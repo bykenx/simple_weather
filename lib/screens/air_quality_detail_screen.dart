@@ -1,34 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
+import 'package:simple_weather/utils/air_quality_utils.dart';
 
 class AirQualityDetailScreen extends StatelessWidget {
   final AirQualityModel airQuality;
 
   const AirQualityDetailScreen({super.key, required this.airQuality});
-
-  Color _getAqiColor(double aqi) {
-    if (aqi <= 50) return Colors.green;
-    if (aqi <= 100) return Colors.yellow;
-    if (aqi <= 150) return Colors.orange;
-    if (aqi <= 200) return Colors.red;
-    if (aqi <= 300) return Colors.purple;
-    return Colors.red.shade900;
-  }
-
-  String _formatValue(double value, String code) {
-    switch (code) {
-      case 'pm2p5':
-      case 'pm10':
-        return '${value.toStringAsFixed(1)} μg/m³';
-      case 'no2':
-      case 'o3':
-        return '${value.toStringAsFixed(1)} ppb';
-      case 'co':
-        return '${value.toStringAsFixed(1)} ppm';
-      default:
-        return value.toStringAsFixed(1);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +42,13 @@ class AirQualityDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: _getAqiColor(airQuality.aqi),
+                      color: AirQualityUtils.getAqiColor(airQuality.aqi),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       children: [
                         Text(
-                          airQuality.aqi.toString(),
+                          AirQualityUtils.getAqiDisplayValue(airQuality.aqi),
                           style: const TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
@@ -188,7 +165,7 @@ class AirQualityDetailScreen extends StatelessWidget {
         children: [
           Text(name, style: const TextStyle(fontSize: 16)),
           Text(
-            _formatValue(value, code),
+            AirQualityUtils.formatPollutantValue(value, code),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],

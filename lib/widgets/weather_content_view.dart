@@ -51,7 +51,7 @@ class WeatherContentView extends StatelessWidget {
                   ],
                   WeatherDetailsCard(weather: weather),
                   const SizedBox(height: 20),
-                  if (airQuality != null) ...[
+                  if (airQuality != null && airQuality!.code == 'cn-mee') ...[
                     AirQualityCard(airQuality: airQuality!),
                     const SizedBox(height: 20),
                   ],

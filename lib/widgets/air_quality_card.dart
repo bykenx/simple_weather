@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/air_quality_model.dart';
 import 'package:simple_weather/routes/app_routes.dart';
+import 'package:simple_weather/utils/air_quality_utils.dart';
 
 class AirQualityCard extends StatelessWidget {
   final AirQualityModel airQuality;
 
   const AirQualityCard({super.key, required this.airQuality});
-
-  Color _getAqiColor(double aqi) {
-    if (aqi <= 50) return Colors.green;
-    if (aqi <= 100) return Colors.yellow;
-    if (aqi <= 150) return Colors.orange;
-    if (aqi <= 200) return Colors.red;
-    if (aqi <= 300) return Colors.purple;
-    return Colors.red.shade900;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,12 +42,12 @@ class AirQualityCard extends StatelessWidget {
                       width: 60,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: _getAqiColor(airQuality.aqi),
+                        color: AirQualityUtils.getAqiColor(airQuality.aqi),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
                         child: Text(
-                          airQuality.aqi.toString(),
+                          AirQualityUtils.getAqiDisplayValue(airQuality.aqi),
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
