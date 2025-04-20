@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/widgets/current_city_weather.dart';
@@ -42,6 +44,9 @@ class WeatherAppBar extends StatelessWidget {
           var titleOpacity =
               scrollPercent < 0.5 ? 0.0 : (scrollPercent - 0.5) / 0.5;
           var contentOpacity = scrollPercent < 0.5 ? 1 - scrollPercent : 0.0;
+
+          titleOpacity = max(min(titleOpacity, 1.0), 0.0);
+          contentOpacity = max(min(contentOpacity, 1.0), 0.0);
 
           return FlexibleSpaceBar(
             collapseMode: CollapseMode.pin,
