@@ -85,6 +85,15 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
       return;
     }
 
+    // 检查是否至少包含一个汉字或两个字符
+    bool hasChinese = RegExp(r'[\u4e00-\u9fa5]').hasMatch(query);
+    if (!hasChinese && query.length < 2) {
+      setState(() {
+        _searchResults = [];
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
