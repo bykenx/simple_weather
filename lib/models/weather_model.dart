@@ -123,44 +123,50 @@ class HourlyWeatherModel {
   final double temp;
   final String icon;
   final String text;
+  final String wind360;
   final String windDir;
   final String windScale;
   final double windSpeed;
   final double humidity;
   final double precip;
+  final double? pop;
   final double pressure;
-  final double cloud;
-  final double dew;
+  final double? cloud;
+  final double? dew;
 
   HourlyWeatherModel({
     required this.time,
     required this.temp,
     required this.icon,
     required this.text,
+    required this.wind360,
     required this.windDir,
     required this.windScale,
     required this.windSpeed,
     required this.humidity,
     required this.precip,
     required this.pressure,
-    required this.cloud,
-    required this.dew,
+    this.pop,
+    this.cloud,
+    this.dew,
   });
 
   factory HourlyWeatherModel.fromJson(Map<String, dynamic> json) {
     return HourlyWeatherModel(
       time: DateTime.parse(json['fxTime']),
-      temp: double.tryParse(json['temp']) ?? double.nan,
-      icon: json['icon'],
-      text: json['text'],
-      windDir: json['windDir'],
-      windScale: json['windScale'],
-      windSpeed: double.tryParse(json['windSpeed']) ?? double.nan,
-      humidity: double.tryParse(json['humidity']) ?? double.nan,
-      precip: double.tryParse(json['precip']) ?? double.nan,
-      pressure: double.tryParse(json['pressure']) ?? double.nan,
-      cloud: double.tryParse(json['cloud']) ?? double.nan,
-      dew: double.tryParse(json['dew']) ?? double.nan,
+      temp: double.tryParse(json['temp'] ?? '') ?? double.nan,
+      icon: json['icon'] ?? '',
+      text: json['text'] ?? '',
+      wind360: json['wind360'] ?? '',
+      windDir: json['windDir'] ?? '',
+      windScale: json['windScale'] ?? '',
+      windSpeed: double.tryParse(json['windSpeed'] ?? '') ?? double.nan,
+      humidity: double.tryParse(json['humidity'] ?? '') ?? double.nan,
+      precip: double.tryParse(json['precip'] ?? '') ?? 0.0,
+      pressure: double.tryParse(json['pressure'] ?? '') ?? double.nan,
+      pop: json['pop'] != null ? double.tryParse(json['pop']) : null,
+      cloud: json['cloud'] != null ? double.tryParse(json['cloud']) : null,
+      dew: json['dew'] != null ? double.tryParse(json['dew']) : null,
     );
   }
   
@@ -170,14 +176,16 @@ class HourlyWeatherModel {
       'temp': temp.toString(),
       'icon': icon,
       'text': text,
+      'wind360': wind360,
       'windDir': windDir,
       'windScale': windScale,
       'windSpeed': windSpeed.toString(),
       'humidity': humidity.toString(),
       'precip': precip.toString(),
       'pressure': pressure.toString(),
-      'cloud': cloud.toString(),
-      'dew': dew.toString(),
+      'pop': pop?.toString(),
+      'cloud': cloud?.toString(),
+      'dew': dew?.toString(),
     };
   }
 }
