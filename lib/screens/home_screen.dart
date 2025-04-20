@@ -15,6 +15,7 @@ import 'package:simple_weather/widgets/loading_overlay.dart';
 import 'package:simple_weather/widgets/setting_not_complete_view.dart';
 import 'package:simple_weather/widgets/weather_app_bar.dart';
 import 'package:simple_weather/widgets/weather_content_view.dart';
+import 'package:simple_weather/widgets/weather_loading_failed_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -153,6 +154,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final cityData = _cityWeatherDataMap[city.uniqueName]!;
 
+    // 清除之前的错误状态
+    cityData.clearError();
+
     showOverlay = showOverlay ?? !cityData.hasData;
 
     if (showOverlay) {
@@ -217,7 +221,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (showOverlay) {
         setState(() {
           cityData.isLoading = false;
-          _isLoading = false;
+
+          if (city == _cities[_cityIndex] && showOverlay == true) {
+            _isLoading = false;
+          }
+
+          cityData.setError(e.toString());
         });
       }
     }
@@ -473,6 +482,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               final city = _cities[index];
                               final cityData =
                                   _cityWeatherDataMap[city.uniqueName];
+
+                              // 显示加载失败视图
+                              if (cityData?.hasError == true) {
+                                return WeatherLoadingFailedView(
+                                  errorMessage: cityData!.errorMessage,
+                                  onRetry:
+                                      () => _loadCityWeather(
+                                        city,
+                                        showOverlay: true,
+                                      ),
+                                );
+                              }
 
                               if (cityData?.weather == null) {
                                 return const SizedBox.shrink();

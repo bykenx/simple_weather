@@ -10,9 +10,16 @@ class CityWeatherData {
   List<WeatherWarningModel>? warnings;
   AirQualityModel? airQuality;
   bool isLoading;
+  bool hasError;
+  String? errorMessage;
   late DateTime lastUpdated;
 
-  CityWeatherData(this.city, {this.isLoading = false}) {
+  CityWeatherData(
+    this.city, {
+    this.isLoading = false,
+    this.hasError = false,
+    this.errorMessage,
+  }) {
     lastUpdated = DateTime.now();
   }
 
@@ -20,4 +27,14 @@ class CityWeatherData {
 
   bool get isExpired =>
       DateTime.now().isAfter(lastUpdated.add(const Duration(hours: 1)));
+
+  void clearError() {
+    hasError = false;
+    errorMessage = null;
+  }
+
+  void setError(String message) {
+    hasError = true;
+    errorMessage = message;
+  }
 }
