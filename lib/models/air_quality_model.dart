@@ -1,5 +1,5 @@
 class AirQualityModel {
-  final int aqi;
+  final double aqi;
   final String code;
   final String name;
   final String category;
@@ -41,7 +41,7 @@ class AirQualityModel {
     }
 
     return AirQualityModel(
-      aqi: json['aqi'] ?? 0,
+      aqi: json['aqi'] ?? 0.0,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
       category: json['category'] ?? '',

@@ -7,7 +7,7 @@ class AirQualityCard extends StatelessWidget {
 
   const AirQualityCard({super.key, required this.airQuality});
 
-  Color _getAqiColor(int aqi) {
+  Color _getAqiColor(double aqi) {
     if (aqi <= 50) return Colors.green;
     if (aqi <= 100) return Colors.yellow;
     if (aqi <= 150) return Colors.orange;

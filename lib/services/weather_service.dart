@@ -211,13 +211,14 @@ class WeatherService {
       rethrow;
     }
   }
-  
+
   // 从API响应中提取空气质量数据
-  Map<String, dynamic> extractAirQualityData(Map<String, dynamic> responseData) {
-    if (responseData.containsKey('indexes') && 
-        responseData['indexes'] is List && 
+  Map<String, dynamic> extractAirQualityData(
+    Map<String, dynamic> responseData,
+  ) {
+    if (responseData.containsKey('indexes') &&
+        responseData['indexes'] is List &&
         responseData['indexes'].isNotEmpty) {
-      
       final firstIndex = responseData['indexes'][0];
       final Map<String, dynamic> result = {
         'aqi': firstIndex['aqi'],
@@ -228,20 +229,18 @@ class WeatherService {
         'health': firstIndex['health'],
         'pollutants': responseData['pollutants'],
       };
-      
       return result;
     }
-    
-    // 如果结构不符合预期，返回空数据
+
     return {
-      'aqi': 0,
+      'aqi': 0.0,
       'code': '',
       'name': '',
       'category': '',
       'primaryPollutant': {'code': '', 'name': '', 'fullName': ''},
       'health': {
         'effect': '',
-        'advice': {'generalPopulation': '', 'sensitivePopulation': ''}
+        'advice': {'generalPopulation': '', 'sensitivePopulation': ''},
       },
       'pollutants': [],
     };
