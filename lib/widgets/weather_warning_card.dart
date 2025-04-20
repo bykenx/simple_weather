@@ -36,32 +36,32 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: widget.warnings.length > 1 ? 130 : 110,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: widget.warnings.length,
-              itemBuilder: (context, index) {
-                final warning = widget.warnings[index];
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.warningDetail,
-                        arguments: warning,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(15),
-                    child: Padding(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.warningDetail,
+            arguments: widget.warnings[_currentPage],
+          );
+        },
+        child: Container(
+          height: widget.warnings.length > 1 ? 130 : 110,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: widget.warnings.length,
+                  itemBuilder: (context, index) {
+                    final warning = widget.warnings[index];
+                    return Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,34 +110,34 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (widget.warnings.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(widget.warnings.length, (index) {
-                  return Container(
-                    width: _currentPage == index ? 16 : 8,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color:
-                          _currentPage == index
-                              ? Colors.blue
-                              : Colors.grey.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
               ),
-            ),
-        ],
+              if (widget.warnings.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(widget.warnings.length, (index) {
+                      return Container(
+                        width: _currentPage == index ? 16 : 8,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              _currentPage == index
+                                  ? Colors.blue
+                                  : Colors.grey.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
