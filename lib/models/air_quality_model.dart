@@ -29,8 +29,8 @@ class AirQualityModel {
     final pollutants = <String, double>{};
     if (json.containsKey('pollutants')) {
       for (final pollutant in json['pollutants']) {
-        if (pollutant is Map && 
-            pollutant.containsKey('code') && 
+        if (pollutant is Map &&
+            pollutant.containsKey('code') &&
             pollutant.containsKey('concentration') &&
             pollutant['concentration'] is Map &&
             pollutant['concentration'].containsKey('value')) {
@@ -41,14 +41,18 @@ class AirQualityModel {
     }
 
     return AirQualityModel(
-      aqi: json['aqi'] ?? 0.0,
+      aqi:
+          json['aqi'] is double
+              ? json['aqi']
+              : json['aqi'] is int
+              ? json['aqi'].toDouble()
+              : 0.0,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
       category: json['category'] ?? '',
       primaryPollutantCode: json['primaryPollutant']?['code'] ?? '',
       primaryPollutantName: json['primaryPollutant']?['name'] ?? '',
-      primaryPollutantFullName:
-          json['primaryPollutant']?['fullName'] ?? '',
+      primaryPollutantFullName: json['primaryPollutant']?['fullName'] ?? '',
       pollutants: pollutants,
       healthEffect: json['health']?['effect'] ?? '',
       healthAdviceGeneral:
@@ -57,7 +61,7 @@ class AirQualityModel {
           json['health']?['advice']?['sensitivePopulation'] ?? '',
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'aqi': aqi,
@@ -76,10 +80,15 @@ class AirQualityModel {
           'sensitivePopulation': healthAdviceSensitive,
         },
       },
-      'pollutants': pollutants.entries.map((entry) => {
-        'code': entry.key,
-        'concentration': {'value': entry.value},
-      }).toList(),
+      'pollutants':
+          pollutants.entries
+              .map(
+                (entry) => {
+                  'code': entry.key,
+                  'concentration': {'value': entry.value},
+                },
+              )
+              .toList(),
     };
   }
 }
