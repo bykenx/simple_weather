@@ -9,6 +9,7 @@ import 'package:simple_weather/models/weather_model.dart';
 
 class WeatherCacheService {
   static const String _weatherCacheKey = 'weather_cache';
+  static const String _hotCitiesCacheKey = 'hot_cities_cache'; // 热门城市缓存键
   static final WeatherCacheService _instance = WeatherCacheService._internal();
   
   factory WeatherCacheService() => _instance;
@@ -41,6 +42,75 @@ class WeatherCacheService {
         print('缓存保存错误: $e');
       }
     }
+  }
+
+  // 保存热门城市列表到缓存
+  Future<void> saveHotCities(List<CityModel> cities) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final cacheData = {
+        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        'cities': cities.map((city) => city.toJson()).toList(),
+      };
+      
+      await prefs.setString(_hotCitiesCacheKey, jsonEncode(cacheData));
+      
+      if (kDebugMode) {
+        print('已保存热门城市到缓存');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('保存热门城市缓存错误: $e');
+      }
+    }
+  }
+
+  // 从缓存加载热门城市列表
+  Future<List<CityModel>?> loadHotCities() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheString = prefs.getString(_hotCitiesCacheKey);
+      
+      if (cacheString == null || cacheString.isEmpty) return null;
+      
+      final Map<String, dynamic> cacheData = jsonDecode(cacheString);
+      
+      // 检查缓存是否过期
+      if (isHotCitiesCacheExpired(cacheData)) {
+        if (kDebugMode) {
+          print('热门城市缓存已过期');
+        }
+        return null;
+      }
+      
+      if (cacheData['cities'] != null) {
+        final cities = (cacheData['cities'] as List)
+            .map((item) => CityModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+        
+        if (kDebugMode) {
+          print('从缓存加载热门城市列表');
+        }
+        
+        return cities;
+      }
+      
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('加载热门城市缓存错误: $e');
+      }
+      return null;
+    }
+  }
+
+  // 检查热门城市缓存是否过期（每24小时更新一次）
+  bool isHotCitiesCacheExpired(Map<String, dynamic> cacheData) {
+    if (!cacheData.containsKey('lastUpdated')) return true;
+    
+    final lastUpdated = DateTime.fromMillisecondsSinceEpoch(cacheData['lastUpdated']);
+    return DateTime.now().isAfter(lastUpdated.add(const Duration(hours: 24)));
   }
 
   // 从缓存加载城市天气数据
@@ -116,13 +186,26 @@ class WeatherCacheService {
     }
   }
 
+  // 清除热门城市缓存
+  Future<void> clearHotCitiesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_hotCitiesCacheKey);
+      if (kDebugMode) {
+        print('已清除热门城市缓存');
+      }
+    } catch (e) {
+      // 忽略清除缓存错误
+    }
+  }
+
   // 清除所有缓存数据
   Future<void> clearAllCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final keys = prefs.getKeys();
       for (final key in keys) {
-        if (key.startsWith(_weatherCacheKey)) {
+        if (key.startsWith(_weatherCacheKey) || key == _hotCitiesCacheKey) {
           await prefs.remove(key);
         }
       }

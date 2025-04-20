@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/services/weather_service.dart';
 import 'package:simple_weather/services/city_service.dart';
+import 'package:simple_weather/services/weather_cache_service.dart';
 import 'package:simple_weather/utils/debounce_utils.dart';
+import 'package:flutter/foundation.dart';
 
 class CitySearchScreen extends StatefulWidget {
   const CitySearchScreen({super.key});
@@ -14,6 +16,7 @@ class CitySearchScreen extends StatefulWidget {
 class _CitySearchScreenState extends State<CitySearchScreen> {
   final WeatherService _weatherService = WeatherService();
   final CityService _cityService = CityService();
+  final WeatherCacheService _weatherCacheService = WeatherCacheService();
   final TextEditingController _searchController = TextEditingController();
   final DebounceUtils _debounce = DebounceUtils();
   List<CityModel> _hotCities = [];
@@ -28,11 +31,30 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
 
   Future<void> _loadHotCities() async {
     try {
+      // 尝试从缓存加载热门城市列表
+      final cachedHotCities = await _weatherCacheService.loadHotCities();
+      
+      if (cachedHotCities != null) {
+        setState(() {
+          _hotCities = cachedHotCities;
+          _isLoading = false;
+        });
+        if (kDebugMode) {
+          print('从缓存加载热门城市成功');
+        }
+        return;
+      }
+      
+      // 如果缓存不存在或已过期，从网络加载
       final hotCitiesJson = await _weatherService.getHotCities();
       final cities =
           (hotCitiesJson['topCityList'] as List)
               .map((json) => CityModel.fromJson(json))
               .toList();
+      
+      // 保存到缓存
+      await _weatherCacheService.saveHotCities(cities);
+      
       setState(() {
         _hotCities = cities;
         _isLoading = false;
