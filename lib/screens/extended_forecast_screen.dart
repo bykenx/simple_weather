@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/models/forecast_days.dart';
 import 'package:simple_weather/utils/weather_icon_utils.dart';
 import 'package:simple_weather/utils/date_utils.dart';
 import 'package:simple_weather/services/weather_service.dart';
+import 'package:simple_weather/services/weather_cache_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ExtendedForecastScreen extends StatefulWidget {
   final CityModel currentCity;
@@ -17,13 +21,96 @@ class ExtendedForecastScreen extends StatefulWidget {
 
 class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
   final WeatherService _weatherService = WeatherService();
+  final WeatherCacheService _weatherCacheService = WeatherCacheService();
+  static const String _extendedForecastCacheKey = 'extended_forecast_cache';
+  static const Duration _cacheExpiry = Duration(hours: 6); // 6小时过期
+  
   List<DailyWeatherModel>? _dailyForecast;
   bool _isLoading = true;
+  DateTime? _lastUpdated;
 
   @override
   void initState() {
     super.initState();
-    _loadExtendedForecast();
+    _loadExtendedForecastWithCache();
+  }
+
+  // 检查缓存是否过期
+  bool _isCacheExpired() {
+    if (_lastUpdated == null) return true;
+    return DateTime.now().isAfter(_lastUpdated!.add(_cacheExpiry));
+  }
+
+  // 加载扩展天气预报（优先从缓存加载）
+  Future<void> _loadExtendedForecastWithCache() async {
+    // 尝试从缓存加载数据
+    await _loadFromCache();
+    
+    // 如果缓存不存在或已过期，从网络加载
+    if (_dailyForecast == null || _isCacheExpired()) {
+      await _loadExtendedForecast();
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // 从缓存加载数据
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
+      final cacheJson = prefs.getString(cacheKey);
+      
+      if (cacheJson != null && cacheJson.isNotEmpty) {
+        final cacheData = Map<String, dynamic>.from(jsonDecode(cacheJson));
+        
+        setState(() {
+          _lastUpdated = DateTime.fromMillisecondsSinceEpoch(cacheData['lastUpdated']);
+          
+          if (cacheData['forecast'] != null) {
+            _dailyForecast = (cacheData['forecast'] as List)
+                .map((item) => DailyWeatherModel.fromJson(Map<String, dynamic>.from(item)))
+                .toList();
+          }
+        });
+        
+        if (kDebugMode) {
+          print('从缓存加载15天天气预报');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('加载缓存出错: $e');
+      }
+      // 缓存加载错误，忽略并继续从网络加载
+    }
+  }
+
+  // 将数据保存到缓存
+  Future<void> _saveToCache() async {
+    if (_dailyForecast == null) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = '${_extendedForecastCacheKey}_${widget.currentCity.uniqueName}';
+      
+      final cacheData = {
+        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        'forecast': _dailyForecast!.map((item) => item.toJson()).toList(),
+      };
+      
+      await prefs.setString(cacheKey, jsonEncode(cacheData));
+      
+      if (kDebugMode) {
+        print('已保存15天天气预报到缓存');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('保存缓存出错: $e');
+      }
+    }
   }
 
   Future<void> _loadExtendedForecast() async {
@@ -33,6 +120,9 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('请先完成API配置')));
       }
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -49,14 +139,21 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
               (result['daily'] as List)
                   .map((item) => DailyWeatherModel.fromJson(item))
                   .toList();
+          _lastUpdated = DateTime.now();
           _isLoading = false;
         });
+        
+        // 保存到缓存
+        _saveToCache();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.toString())));
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

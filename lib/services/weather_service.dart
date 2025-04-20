@@ -202,9 +202,48 @@ class WeatherService {
         queryParameters: {'key': apiKey},
       );
 
-      return AirQualityModel.fromJson(response.data);
+      // 处理API返回的JSON结构，提取需要的部分
+      final responseData = response.data;
+      final airQualityData = extractAirQualityData(responseData);
+      
+      return AirQualityModel.fromJson(airQualityData);
     } catch (e) {
       rethrow;
     }
+  }
+  
+  // 从API响应中提取空气质量数据
+  Map<String, dynamic> extractAirQualityData(Map<String, dynamic> responseData) {
+    if (responseData.containsKey('indexes') && 
+        responseData['indexes'] is List && 
+        responseData['indexes'].isNotEmpty) {
+      
+      final firstIndex = responseData['indexes'][0];
+      final Map<String, dynamic> result = {
+        'aqi': firstIndex['aqi'],
+        'code': firstIndex['code'],
+        'name': firstIndex['name'],
+        'category': firstIndex['category'],
+        'primaryPollutant': firstIndex['primaryPollutant'],
+        'health': firstIndex['health'],
+        'pollutants': responseData['pollutants'],
+      };
+      
+      return result;
+    }
+    
+    // 如果结构不符合预期，返回空数据
+    return {
+      'aqi': 0,
+      'code': '',
+      'name': '',
+      'category': '',
+      'primaryPollutant': {'code': '', 'name': '', 'fullName': ''},
+      'health': {
+        'effect': '',
+        'advice': {'generalPopulation': '', 'sensitivePopulation': ''}
+      },
+      'pollutants': [],
+    };
   }
 }

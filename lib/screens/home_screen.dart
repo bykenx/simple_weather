@@ -8,6 +8,7 @@ import 'package:simple_weather/models/weather_model.dart';
 import 'package:simple_weather/routes/app_routes.dart';
 import 'package:simple_weather/services/city_service.dart';
 import 'package:simple_weather/services/settings_service.dart';
+import 'package:simple_weather/services/weather_cache_service.dart';
 import 'package:simple_weather/services/weather_service.dart';
 import 'package:simple_weather/widgets/empty_city_view.dart';
 import 'package:simple_weather/widgets/loading_overlay.dart';
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final WeatherService _weatherService = WeatherService();
   final CityService _cityService = CityService();
   final SettingsService _settingsService = SettingsService();
+  final WeatherCacheService _weatherCacheService = WeatherCacheService();
   bool _isLoading = false;
   bool _isScrolling = false;
   bool _isSettingsComplete = false;
@@ -56,25 +58,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController.dispose();
     super.dispose();
   }
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      // 应用从后台切换到前台时，检查当前城市的天气数据是否过期
       _checkAndRefreshWeatherData();
     }
   }
-  
-  // 检查并刷新天气数据
+
+  bool _isValidData(CityWeatherData? data) {
+    return data != null && !data.isExpired && data.hasData;
+  }
+
   Future<void> _checkAndRefreshWeatherData() async {
     if (_cities.isEmpty || _cityIndex >= _cities.length) return;
-    
+
     final city = _cities[_cityIndex];
     final cityData = _cityWeatherDataMap[city.uniqueName];
-    
-    // 如果数据已过期（1小时未刷新），则更新天气数据
-    if (cityData?.isExpired == true) {
+
+    if (!_isValidData(cityData)) {
       await _loadCityWeather(city, showOverlay: false);
     }
   }
@@ -107,7 +110,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     }
 
-    _loadCityWeather(_cities[_cityIndex]);
+    // 一次性预加载所有城市的缓存数据
+    await _preloadCitiesFromCache();
+
+    // 如果当前城市没有数据或数据过期，则从网络加载
+    if (_cityIndex < _cities.length) {
+      final currentCity = _cities[_cityIndex];
+      final currentCityData = _cityWeatherDataMap[currentCity.uniqueName];
+      if (currentCityData == null ||
+          !currentCityData.hasData ||
+          currentCityData.isExpired) {
+        await _loadCityWeather(currentCity);
+      }
+    }
+  }
+
+  // 从缓存预加载所有城市的天气数据
+  Future<void> _preloadCitiesFromCache() async {
+    for (final city in _cities) {
+      final cachedData = await _weatherCacheService.loadWeatherData(city);
+      if (_isValidData(cachedData)) {
+        setState(() {
+          _cityWeatherDataMap[city.uniqueName] = cachedData!;
+        });
+        if (kDebugMode) {
+          print('从缓存预加载 ${city.name} 的天气数据');
+        }
+      }
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -176,6 +206,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _isLoading = false;
         }
       });
+
+      // 将天气数据保存到缓存
+      await _weatherCacheService.saveWeatherData(city.uniqueName, cityData);
     } catch (e) {
       if (kDebugMode) {
         print(e);
@@ -190,13 +223,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadCurrentCityWeather({bool? showOverlay}) async {
+  Future<void> _loadCurrentCityWeather({
+    bool? showOverlay,
+    bool forceRefresh = false,
+  }) async {
     if (_cities.isEmpty || _cityIndex >= _cities.length) return;
-    return _loadCityWeather(_cities[_cityIndex], showOverlay: showOverlay);
+
+    final city = _cities[_cityIndex];
+    final cityData = _cityWeatherDataMap[city.uniqueName];
+
+    // 强制刷新或数据无效时，直接从网络加载
+    if (forceRefresh || !_isValidData(cityData)) {
+      return _loadCityWeather(city, showOverlay: showOverlay);
+    }
+
+    // 数据有效且不需要刷新，只更新UI状态
+    if (showOverlay == true) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   // 页面切换回调
-  void _onPageChanged(int index) {
+  void _onPageChanged(int index) async {
     if (index < 0 || index >= _cities.length) return;
 
     final city = _cities[index];
@@ -210,7 +260,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     _cityService.setCurrentCity(city);
-    if (cityData?.isExpired == true || cityData?.hasData != true) {
+
+    // 如果数据无效，直接从网络加载，不再检查缓存
+    if (!_isValidData(cityData)) {
       _loadCityWeather(city);
     }
   }
@@ -433,7 +485,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 warnings: cityData.warnings,
                                 airQuality: cityData.airQuality,
                                 city: city,
-                                onRefresh: () => _loadCurrentCityWeather(),
+                                onRefresh:
+                                    () => _loadCurrentCityWeather(
+                                      forceRefresh: true,
+                                    ),
                               );
                             },
                           ),

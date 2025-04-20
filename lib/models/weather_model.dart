@@ -28,6 +28,18 @@ class DailyWeatherModel {
       windSpeed: double.tryParse(json['windSpeedDay']) ?? double.nan,
     );
   }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'fxDate': date.toIso8601String(),
+      'iconDay': icon,
+      'textDay': description, 
+      'tempMax': maxTemp.toString(),
+      'tempMin': minTemp.toString(),
+      'humidity': humidity.toString(),
+      'windSpeedDay': windSpeed.toString(),
+    };
+  }
 }
 
 class LiveWeatherModel {
@@ -84,6 +96,26 @@ class LiveWeatherModel {
       dew: double.tryParse(json['dew']) ?? double.nan,
     );
   }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'obsTime': obsTime,
+      'temp': temp.toString(),
+      'feelsLike': feelsLike.toString(),
+      'icon': icon,
+      'text': text,
+      'wind360': wind360,
+      'windDir': windDir,
+      'windScale': windScale,
+      'windSpeed': windSpeed.toString(),
+      'humidity': humidity.toString(),
+      'precip': precip.toString(),
+      'pressure': pressure.toString(),
+      'vis': vis.toString(),
+      'cloud': cloud.toString(),
+      'dew': dew.toString(),
+    };
+  }
 }
 
 class HourlyWeatherModel {
@@ -130,6 +162,23 @@ class HourlyWeatherModel {
       cloud: double.tryParse(json['cloud']) ?? double.nan,
       dew: double.tryParse(json['dew']) ?? double.nan,
     );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'fxTime': time.toIso8601String(),
+      'temp': temp.toString(),
+      'icon': icon,
+      'text': text,
+      'windDir': windDir,
+      'windScale': windScale,
+      'windSpeed': windSpeed.toString(),
+      'humidity': humidity.toString(),
+      'precip': precip.toString(),
+      'pressure': pressure.toString(),
+      'cloud': cloud.toString(),
+      'dew': dew.toString(),
+    };
   }
 }
 
@@ -180,5 +229,23 @@ class WeatherWarningModel {
       typeName: json['typeName'],
       text: json['text'],
     );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'sender': sender,
+      'pubTime': pubTime.toIso8601String(),
+      'title': title,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'status': status,
+      'level': level,
+      'severity': severity,
+      'severityColor': severityColor,
+      'type': type,
+      'typeName': typeName,
+      'text': text,
+    };
   }
 }

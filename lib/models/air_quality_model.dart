@@ -26,29 +26,60 @@ class AirQualityModel {
   });
 
   factory AirQualityModel.fromJson(Map<String, dynamic> json) {
-    var firstIndex = json['indexes'][0];
-
     final pollutants = <String, double>{};
-    for (final pollutant in json['pollutants']) {
-      final value = pollutant['concentration']['value'] as double;
-      pollutants[pollutant['code']] = value;
+    if (json.containsKey('pollutants')) {
+      for (final pollutant in json['pollutants']) {
+        if (pollutant is Map && 
+            pollutant.containsKey('code') && 
+            pollutant.containsKey('concentration') &&
+            pollutant['concentration'] is Map &&
+            pollutant['concentration'].containsKey('value')) {
+          final value = pollutant['concentration']['value'] as double;
+          pollutants[pollutant['code']] = value;
+        }
+      }
     }
 
     return AirQualityModel(
-      aqi: firstIndex?['aqi'] ?? 0,
-      code: firstIndex?['code'] ?? '',
-      name: firstIndex?['name'] ?? '',
-      category: firstIndex?['category'] ?? '',
-      primaryPollutantCode: firstIndex?['primaryPollutant']?['code'] ?? '',
-      primaryPollutantName: firstIndex?['primaryPollutant']?['name'] ?? '',
+      aqi: json['aqi'] ?? 0,
+      code: json['code'] ?? '',
+      name: json['name'] ?? '',
+      category: json['category'] ?? '',
+      primaryPollutantCode: json['primaryPollutant']?['code'] ?? '',
+      primaryPollutantName: json['primaryPollutant']?['name'] ?? '',
       primaryPollutantFullName:
-          firstIndex?['primaryPollutant']?['fullName'] ?? '',
+          json['primaryPollutant']?['fullName'] ?? '',
       pollutants: pollutants,
-      healthEffect: firstIndex?['health']?['effect'] ?? '',
+      healthEffect: json['health']?['effect'] ?? '',
       healthAdviceGeneral:
-          firstIndex?['health']?['advice']?['generalPopulation'] ?? '',
+          json['health']?['advice']?['generalPopulation'] ?? '',
       healthAdviceSensitive:
-          firstIndex?['health']?['advice']?['sensitivePopulation'] ?? '',
+          json['health']?['advice']?['sensitivePopulation'] ?? '',
     );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'aqi': aqi,
+      'code': code,
+      'name': name,
+      'category': category,
+      'primaryPollutant': {
+        'code': primaryPollutantCode,
+        'name': primaryPollutantName,
+        'fullName': primaryPollutantFullName,
+      },
+      'health': {
+        'effect': healthEffect,
+        'advice': {
+          'generalPopulation': healthAdviceGeneral,
+          'sensitivePopulation': healthAdviceSensitive,
+        },
+      },
+      'pollutants': pollutants.entries.map((entry) => {
+        'code': entry.key,
+        'concentration': {'value': entry.value},
+      }).toList(),
+    };
   }
 }
