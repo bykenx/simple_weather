@@ -42,7 +42,7 @@ class AirQualityCard extends StatelessWidget {
                       width: 60,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: AirQualityUtils.getAqiColor(airQuality.aqi),
+                        color: AirQualityUtils.getAqiBackgroundColor(airQuality.aqi),
                         shape: BoxShape.circle,
                       ),
                       child: Center(

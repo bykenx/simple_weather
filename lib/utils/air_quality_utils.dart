@@ -31,6 +31,15 @@ class AirQualityUtils {
     return const Color.fromRGBO(126, 0, 35, 1); // 严重污染
   }
 
+  static Color getAqiBackgroundColor(double aqi) {
+    if (aqi <= 50) return const Color.fromRGBO(0, 180, 0, 1);
+    if (aqi <= 100) return const Color.fromRGBO(180, 180, 0, 1);
+    if (aqi <= 150) return const Color.fromRGBO(200, 100, 0, 1);
+    if (aqi <= 200) return const Color.fromRGBO(180, 0, 0, 1);
+    if (aqi <= 300) return const Color.fromRGBO(120, 0, 60, 1);
+    return const Color.fromRGBO(100, 0, 30, 1);
+  }
+
   static String getPollutantUnit(String code) {
     switch (code) {
       case 'pm2p5':

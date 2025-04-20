@@ -42,7 +42,7 @@ class AirQualityDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: AirQualityUtils.getAqiColor(airQuality.aqi),
+                      color: AirQualityUtils.getAqiBackgroundColor(airQuality.aqi),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
