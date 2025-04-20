@@ -55,13 +55,17 @@ class WeatherContentView extends StatelessWidget {
                     AirQualityCard(airQuality: airQuality!),
                     const SizedBox(height: 20),
                   ],
-                  HourlyForecastCard(hourlyForecast: hourlyForecast!),
-                  const SizedBox(height: 20),
-                  DailyForecastCard(
-                    dailyForecast: dailyForecast!,
-                    currentCity: city,
-                  ),
-                  const SizedBox(height: 20),
+                  if (hourlyForecast != null && hourlyForecast!.isNotEmpty) ...[
+                    HourlyForecastCard(hourlyForecast: hourlyForecast!),
+                    const SizedBox(height: 20),
+                  ],
+                  if (dailyForecast != null && dailyForecast!.isNotEmpty) ...[
+                    DailyForecastCard(
+                      dailyForecast: dailyForecast!,
+                      currentCity: city,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ]),
               ),
             ),
