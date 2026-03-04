@@ -14,14 +14,15 @@ class CurrentWeatherInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           Icon(
-            WeatherIconUtils.getWeatherIcon(weather.icon),
+            WeatherIconUtils.getWeatherIcon(weather.icon, filled: true),
             size: 80,
-            color: Colors.blue,
+            color: colorScheme.primary,
           ),
           const SizedBox(height: 10),
           Text(

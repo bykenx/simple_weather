@@ -26,11 +26,12 @@ class WeatherAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SliverAppBar(
       expandedHeight: 400.0,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       elevation: 0,
       title: null,
       flexibleSpace: LayoutBuilder(
@@ -56,7 +57,7 @@ class WeatherAppBar extends StatelessWidget {
               duration: const Duration(milliseconds: 150),
               child: Text(
                 cityName ?? '',
-                style: const TextStyle(color: Colors.black87),
+                style: TextStyle(color: colorScheme.onSurface),
               ),
             ),
             background: Container(
@@ -64,7 +65,7 @@ class WeatherAppBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.blue.shade200, Colors.blue.shade50],
+                  colors: [colorScheme.primaryContainer, colorScheme.surface],
                 ),
               ),
               child:

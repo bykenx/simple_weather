@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/city_model.dart';
 
-class CityCard extends StatelessWidget {
+class CityCard extends StatefulWidget {
   final CityModel city;
   final VoidCallback onDelete;
   final bool isCurrent;
@@ -16,69 +16,99 @@ class CityCard extends StatelessWidget {
   });
 
   @override
+  State<CityCard> createState() => _CityCardState();
+}
+
+class _CityCardState extends State<CityCard> {
+  bool _isSwipingToDelete = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: Key(city.id.toString()),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        if (isCurrent) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('不能删除当前城市')));
-          return false;
-        }
-        return true;
-      },
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      onDismissed: (_) => onDelete(),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          // margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const outerBorderRadius = BorderRadius.all(Radius.circular(15));
+    final borderRadius =
+        _isSwipingToDelete
+            ? const BorderRadius.only(
               topLeft: Radius.circular(15),
               bottomLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
-              bottomRight: Radius.circular(15),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            )
+            : BorderRadius.circular(15);
+    return ClipRRect(
+      borderRadius: outerBorderRadius,
+      child: Dismissible(
+        key: Key(widget.city.id.toString()),
+        direction: DismissDirection.endToStart,
+        confirmDismiss: (_) async {
+          if (widget.isCurrent) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('不能删除当前城市')));
+            return false;
+          }
+          return true;
+        },
+        onUpdate: (details) {
+          final isSwiping =
+              details.direction == DismissDirection.endToStart &&
+              details.progress > 0;
+          if (_isSwipingToDelete != isSwiping) {
+            setState(() {
+              _isSwipingToDelete = isSwiping;
+            });
+          }
+        },
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          decoration: const BoxDecoration(
+            color: Colors.red,
+            borderRadius: outerBorderRadius,
           ),
-          child: ListTile(
-            leading: Icon(
-              Icons.location_city,
-              color: isCurrent ? Colors.blue : Colors.grey,
+          child: const Icon(Icons.delete, color: Colors.white),
+        ),
+        onDismissed: (_) => widget.onDelete(),
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          color:
+              isDark
+                  ? const Color(0xFF2D2E32)
+                  : Theme.of(context).cardColor.withValues(alpha: 0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: borderRadius,
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
             ),
-            title: Text(
-              city.name,
-              style: TextStyle(
-                fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: borderRadius,
+            onTap: widget.onTap,
+            child: ListTile(
+              leading: Icon(
+                Icons.location_city,
+                color:
+                    widget.isCurrent
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
               ),
+              title: Text(
+                widget.city.name,
+                style: TextStyle(
+                  fontWeight:
+                      widget.isCurrent ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text(
+                '${(widget.city.adm2?.isEmpty ?? true) || widget.city.adm2 == widget.city.name ? '' : '${widget.city.adm2},'}${widget.city.adm1 ?? ''} ${widget.city.country ?? ''}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              trailing:
+                  widget.isCurrent
+                      ? Icon(Icons.check_circle, color: colorScheme.primary)
+                      : null,
             ),
-            subtitle: Text(
-              '${(city.adm2?.isEmpty ?? true) || city.adm2 == city.name ? '' : '${city.adm2},'}${city.adm1 ?? ''} ${city.country ?? ''}',
-              style: const TextStyle(fontSize: 12),
-            ),
-            trailing:
-                isCurrent
-                    ? const Icon(Icons.check_circle, color: Colors.blue)
-                    : null,
           ),
         ),
       ),

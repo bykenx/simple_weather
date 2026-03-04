@@ -9,14 +9,15 @@ class AirQualityDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
-            backgroundColor: Colors.blue.shade50,
+            backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('空气质量'),
@@ -26,7 +27,7 @@ class AirQualityDetailScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.blue.shade200, Colors.blue.shade50],
+                    colors: [colorScheme.primaryContainer, colorScheme.surface],
                   ),
                 ),
               ),
@@ -97,7 +98,7 @@ class AirQualityDetailScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(

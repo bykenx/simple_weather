@@ -36,8 +36,31 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final safePageIndex =
+        widget.warnings.isEmpty
+            ? 0
+            : _currentPage.clamp(0, widget.warnings.length - 1);
+    final cardBackgroundColor =
+        isDark
+            ? const Color(0xFF2D2E32)
+            : _getWarningCardBackgroundColor(
+              widget.warnings.isEmpty
+                  ? 'white'
+                  : widget.warnings[safePageIndex].severityColor,
+            );
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: cardBackgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
@@ -47,12 +70,8 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
             arguments: widget.warnings[_currentPage],
           );
         },
-        child: Container(
+        child: SizedBox(
           height: widget.warnings.length > 1 ? 130 : 110,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(15),
-          ),
           child: Column(
             children: [
               Expanded(
@@ -74,7 +93,7 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getWarningColor(
+                                  color: _getWarningIconBackgroundColor(
                                     warning.severityColor,
                                   ),
                                   borderRadius: BorderRadius.circular(4),
@@ -127,8 +146,10 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
                         decoration: BoxDecoration(
                           color:
                               _currentPage == index
-                                  ? Colors.blue
-                                  : Colors.grey.withValues(alpha: 0.5),
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant.withValues(
+                                    alpha: 0.4,
+                                  ),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       );
@@ -142,18 +163,37 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
     );
   }
 
-  Color _getWarningColor(String severityColor) {
+  Color _getWarningCardBackgroundColor(String severityColor) {
     switch (severityColor.toLowerCase()) {
-      case 'blue':
-        return Colors.blue;
-      case 'yellow':
-        return Colors.yellow;
-      case 'orange':
-        return Colors.orange;
       case 'red':
-        return Colors.red;
+        return const Color(0xFFFFF3F0);
+      case 'yellow':
+        return const Color(0xFFFFFEEE);
+      case 'orange':
+        return const Color(0xFFFEF6EA);
+      case 'blue':
+        return const Color(0xFFECF5FE);
+      case 'white':
+        return const Color(0xFFFAFBFD);
       default:
-        return Colors.grey;
+        return const Color(0xFFFAFBFD);
+    }
+  }
+
+  Color _getWarningIconBackgroundColor(String severityColor) {
+    switch (severityColor.toLowerCase()) {
+      case 'red':
+        return const Color(0xFFED2246);
+      case 'yellow':
+        return const Color(0xFFFFD700);
+      case 'orange':
+        return const Color(0xFFFF9518);
+      case 'blue':
+        return const Color(0xFF00A3FF);
+      case 'white':
+        return const Color(0xFFD3D3D3);
+      default:
+        return const Color(0xFFD3D3D3);
     }
   }
 }

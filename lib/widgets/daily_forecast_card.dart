@@ -17,64 +17,68 @@ class DailyForecastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: Theme.of(context).cardColor.withValues(alpha: 0.85),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.extendedForecast,
-              arguments: currentCity,
-            );
-          },
-          borderRadius: BorderRadius.circular(15),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ...List.generate(3, (index) {
-                  final day = dailyForecast[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            WeatherDateUtils.getDateText(day.date),
-                            style: const TextStyle(fontSize: 16),
-                          ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.extendedForecast,
+            arguments: currentCity,
+          );
+        },
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...List.generate(3, (index) {
+                final day = dailyForecast[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          WeatherDateUtils.getDateText(day.date),
+                          style: const TextStyle(fontSize: 16),
                         ),
-                        Icon(
-                          WeatherIconUtils.getWeatherIcon(day.icon),
-                          size: 18,
-                          color: Colors.blue,
+                      ),
+                      Icon(
+                        WeatherIconUtils.getWeatherIcon(day.icon, filled: true),
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          day.description,
+                          style: const TextStyle(fontSize: 16),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            day.description,
-                            style: const TextStyle(fontSize: 16),
-                          ),
+                      ),
+                      Text(
+                        '${day.minTemp.toStringAsFixed(1)} ~ ${day.maxTemp.toStringAsFixed(1)}℃',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ),
         ),
       ),

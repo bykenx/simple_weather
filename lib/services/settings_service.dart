@@ -1,11 +1,29 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class SettingsService {
   static const String _apiKeyKey = 'api_key';
   static const String _apiHostKey = 'api_host';
+  static const String _darkModeEnabledKey = 'dark_mode_enabled';
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;
   SettingsService._internal();
+
+  final ValueNotifier<bool> darkModeEnabled = ValueNotifier<bool>(false);
+  bool _initialized = false;
+
+  Future<void> ensureInitialized() async {
+    if (_initialized) return;
+    final prefs = await SharedPreferences.getInstance();
+    darkModeEnabled.value = prefs.getBool(_darkModeEnabledKey) ?? false;
+    _initialized = true;
+  }
+
+  Future<void> setDarkModeEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_darkModeEnabledKey, enabled);
+    darkModeEnabled.value = enabled;
+  }
 
   Future<String?> getApiKey() async {
     final prefs = await SharedPreferences.getInstance();

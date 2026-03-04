@@ -33,7 +33,7 @@ class WeatherContentView extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: Container(
-        color: Colors.blue.shade50,
+        color: Theme.of(context).colorScheme.surface,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [

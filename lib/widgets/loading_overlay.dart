@@ -13,12 +13,12 @@ class LoadingOverlay extends StatelessWidget {
     if (!isLoading) {
       return const SizedBox.shrink();
     }
-    
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.white.withValues(alpha: 0.7),
-      child: const Center(
+      color: colorScheme.surface.withValues(alpha: 0.7),
+      child: Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
         ),
       ),
     );

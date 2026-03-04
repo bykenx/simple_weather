@@ -25,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
+    await _settingsService.ensureInitialized();
     final apiKey = await _settingsService.getApiKey();
     final apiHost = await _settingsService.getApiHost();
     setState(() {
@@ -59,14 +60,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
-            backgroundColor: Colors.blue.shade50,
+            backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('设置'),
@@ -76,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.blue.shade200, Colors.blue.shade50],
+                    colors: [colorScheme.primaryContainer, colorScheme.surface],
                   ),
                 ),
               ),
@@ -128,6 +130,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                const Text(
+                                  '外观',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Card(
+                                  child: ValueListenableBuilder<bool>(
+                                    valueListenable:
+                                        _settingsService.darkModeEnabled,
+                                    builder: (context, enabled, _) {
+                                      return SwitchListTile(
+                                        title: const Text('夜间模式'),
+                                        value: enabled,
+                                        onChanged:
+                                            (value) => _settingsService
+                                                .setDarkModeEnabled(value),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
                                 const Text(
                                   '和风天气API配置',
                                   style: TextStyle(
@@ -197,13 +223,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 8),
                                 RichText(
                                   text: TextSpan(
-                                    style: const TextStyle(color: Colors.grey),
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                     children: [
                                       const TextSpan(text: '1. 访问 '),
                                       TextSpan(
                                         text: 'https://dev.qweather.com/',
-                                        style: const TextStyle(
-                                          color: Colors.blue,
+                                        style: TextStyle(
+                                          color: colorScheme.primary,
                                           decoration: TextDecoration.underline,
                                         ),
                                         recognizer:
@@ -218,8 +246,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       TextSpan(
                                         text:
                                             'https://console.qweather.com/setting',
-                                        style: const TextStyle(
-                                          color: Colors.blue,
+                                        style: TextStyle(
+                                          color: colorScheme.primary,
                                           decoration: TextDecoration.underline,
                                         ),
                                         recognizer:
@@ -239,10 +267,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: _saveSettings,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white,
-                                    ),
                                     child: const Text('保存'),
                                   ),
                                 ),

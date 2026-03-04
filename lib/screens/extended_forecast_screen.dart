@@ -168,8 +168,9 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
           RefreshIndicator(
@@ -180,7 +181,7 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                 SliverAppBar(
                   expandedHeight: 100.0,
                   floating: false,
-                  backgroundColor: Colors.blue.shade50,
+                  backgroundColor: colorScheme.surface,
                   elevation: 0,
                   flexibleSpace: FlexibleSpaceBar(
                     title: const Text('15天天气预报'),
@@ -190,7 +191,10 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.blue.shade200, Colors.blue.shade50],
+                          colors: [
+                            colorScheme.primaryContainer,
+                            colorScheme.surface,
+                          ],
                         ),
                       ),
                     ),
@@ -209,7 +213,9 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.7),
+                                    color: Theme.of(context).cardColor.withValues(
+                                      alpha: 0.85,
+                                    ),
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                   child: Padding(
@@ -228,9 +234,10 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                                         Icon(
                                           WeatherIconUtils.getWeatherIcon(
                                             day.icon,
+                                            filled: true,
                                           ),
                                           size: 24,
-                                          color: Colors.blue,
+                                          color: colorScheme.primary,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -243,7 +250,7 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '${day.minTemp.toStringAsFixed(1)}° ~ ${day.maxTemp.toStringAsFixed(1)}°',
+                                          '${day.minTemp.toStringAsFixed(1)} ~ ${day.maxTemp.toStringAsFixed(1)}℃',
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -263,10 +270,10 @@ class _ExtendedForecastScreenState extends State<ExtendedForecastScreen> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.white.withValues(alpha: 0.7),
-              child: const Center(
+              color: colorScheme.surface.withValues(alpha: 0.7),
+              child: Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                 ),
               ),
             ),

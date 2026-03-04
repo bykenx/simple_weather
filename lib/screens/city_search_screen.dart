@@ -141,14 +141,15 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
-            backgroundColor: Colors.blue.shade50,
+            backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('添加城市'),
@@ -158,7 +159,7 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.blue.shade200, Colors.blue.shade50],
+                    colors: [colorScheme.primaryContainer, colorScheme.surface],
                   ),
                 ),
               ),
@@ -233,7 +234,7 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
                               onTap: () => _addCity(city),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
@@ -247,9 +248,9 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.location_city,
-                                      color: Colors.blue,
+                                      color: colorScheme.primary,
                                     ),
                                     const SizedBox(height: 8),
                                     Text(

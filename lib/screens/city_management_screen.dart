@@ -48,14 +48,15 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
-            backgroundColor: Colors.blue.shade50,
+            backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('城市管理'),
@@ -65,7 +66,7 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.blue.shade200, Colors.blue.shade50],
+                    colors: [colorScheme.primaryContainer, colorScheme.surface],
                   ),
                 ),
               ),

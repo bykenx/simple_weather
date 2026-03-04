@@ -310,6 +310,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
@@ -412,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               }
             },
             child: Scaffold(
-              backgroundColor: Colors.blue.shade50,
+              backgroundColor: colorScheme.surface,
               floatingActionButton:
                   _cities.isEmpty
                       ? null
