@@ -24,8 +24,8 @@ class CityModel {
       adm1: json['adm1'],
       adm2: json['adm2'],
       country: json['country'],
-      lat: double.tryParse(json['lat']),
-      lon: double.tryParse(json['lon']),
+      lat: double.tryParse(json['lat']?.toString() ?? ''),
+      lon: double.tryParse(json['lon']?.toString() ?? ''),
     );
   }
 

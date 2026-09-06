@@ -25,29 +25,19 @@ class _CityCardState extends State<CityCard> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const outerBorderRadius = BorderRadius.all(Radius.circular(15));
+    const outerBorderRadius = BorderRadius.all(Radius.circular(20));
     final borderRadius =
         _isSwipingToDelete
             ? const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              bottomLeft: Radius.circular(15),
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
             )
-            : BorderRadius.circular(15);
+            : BorderRadius.circular(20);
     return ClipRRect(
       borderRadius: outerBorderRadius,
       child: Dismissible(
         key: Key(widget.city.id.toString()),
         direction: DismissDirection.endToStart,
-        confirmDismiss: (_) async {
-          if (widget.isCurrent) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('不能删除当前城市')));
-            return false;
-          }
-          return true;
-        },
         onUpdate: (details) {
           final isSwiping =
               details.direction == DismissDirection.endToStart &&
@@ -71,14 +61,11 @@ class _CityCardState extends State<CityCard> {
         child: Card(
           margin: EdgeInsets.zero,
           elevation: 0,
-          color:
-              isDark
-                  ? const Color(0xFF2D2E32)
-                  : Theme.of(context).cardColor.withValues(alpha: 0.85),
+          color: colorScheme.surfaceContainerLow,
           shape: RoundedRectangleBorder(
             borderRadius: borderRadius,
             side: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
           clipBehavior: Clip.antiAlias,

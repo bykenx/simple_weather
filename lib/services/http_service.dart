@@ -40,8 +40,10 @@ class HttpService {
         return '服务器错误: ${error.response?.statusCode}';
       case DioExceptionType.cancel:
         return '请求已取消';
+      case DioExceptionType.connectionError:
+        return '网络不可用';
       default:
-        return '网络错误: ${error.message}';
+        return '请求失败，请重试';
     }
   }
 }

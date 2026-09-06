@@ -131,6 +131,54 @@ class WeatherService {
     }
   }
 
+  Future<Map<String, dynamic>> getDailyWeather({
+    required double lat,
+    required double lon,
+  }) async {
+    final host = await _getApiHost();
+    final key = await _getApiKey();
+    final response = await _httpService.get(
+      'https://$host/weather/v1/daily/${lat.toStringAsFixed(2)}/${lon.toStringAsFixed(2)}',
+      queryParameters: {
+        'key': key,
+        'days': 10,
+        'localTime': true,
+        'lang': 'zh',
+      },
+    );
+    if (response.data is! Map ||
+        response.data['days'] is! List ||
+        (response.data['days'] as List).isEmpty) {
+      throw '获取每日天气预报失败';
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> getMoonAstronomy({
+    required double lat,
+    required double lon,
+    required DateTime date,
+  }) async {
+    final host = await _getApiHost();
+    final key = await _getApiKey();
+    final response = await _httpService.get(
+      'https://$host/v7/astronomy/moon',
+      queryParameters: {
+        'location': '${lon.toStringAsFixed(2)},${lat.toStringAsFixed(2)}',
+        'date':
+            '${date.year.toString().padLeft(4, '0')}'
+            '${date.month.toString().padLeft(2, '0')}'
+            '${date.day.toString().padLeft(2, '0')}',
+        'lang': 'zh',
+        'key': key,
+      },
+    );
+    if (response.data is! Map || response.data['code'] != '200') {
+      throw '获取月相数据失败';
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
   Future<Map<String, dynamic>> getHourlyWeather({
     double? lat,
     double? lon,
@@ -140,22 +188,24 @@ class WeatherService {
       throw '请先完成API配置';
     }
     assert(locationId != null || (lat != null && lon != null));
-    try {
-      final apiKey = await _getApiKey();
-      final apiHost = await _getApiHost();
-      final response = await _httpService.get(
-        'https://$apiHost/v7/weather/24h',
-        queryParameters: {'location': '$lon,$lat', 'key': apiKey},
-      );
-
-      if (response.data['code'] != '200') {
-        throw '获取逐小时天气失败';
-      }
-
-      return response.data;
-    } catch (e) {
-      rethrow;
+    final apiKey = await _getApiKey();
+    final apiHost = await _getApiHost();
+    final response = await _httpService.get(
+      'https://$apiHost/weather/v1/hourly/'
+      '${lat!.toStringAsFixed(2)}/${lon!.toStringAsFixed(2)}',
+      queryParameters: {
+        'key': apiKey,
+        'hours': 240,
+        'localTime': true,
+        'lang': 'zh',
+      },
+    );
+    if (response.data is! Map ||
+        response.data['hours'] is! List ||
+        (response.data['hours'] as List).isEmpty) {
+      throw '获取逐小时天气失败';
     }
+    return Map<String, dynamic>.from(response.data);
   }
 
   Future<List<WeatherWarningModel>> getWeatherWarnings({
@@ -181,6 +231,7 @@ class WeatherService {
               .map((item) => WeatherWarningModel.fromJson(item))
               .toList();
         }
+        return [];
       } else if (response.data.containsKey('error')) {
         // 处理数据不可用的情况
         final error = response.data['error'];
@@ -192,7 +243,7 @@ class WeatherService {
           return [];
         }
       }
-      return [];
+      throw '获取天气预警失败';
     } catch (e) {
       rethrow;
     }

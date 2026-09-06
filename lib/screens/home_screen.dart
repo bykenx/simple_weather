@@ -1,524 +1,278 @@
-import 'package:flutter/foundation.dart';
+import '../widgets/weather_bottom_bar.dart';
+import '../utils/url_utils.dart';
+import '../widgets/weather_refresh_indicator.dart';
+import '../widgets/weather_scene.dart';
 import 'package:flutter/material.dart';
-import 'package:simple_weather/models/air_quality_model.dart';
-import 'package:simple_weather/models/city_model.dart';
-import 'package:simple_weather/models/city_weather_data.dart';
-import 'package:simple_weather/models/forecast_days.dart';
-import 'package:simple_weather/models/weather_model.dart';
-import 'package:simple_weather/routes/app_routes.dart';
-import 'package:simple_weather/services/city_service.dart';
-import 'package:simple_weather/services/settings_service.dart';
-import 'package:simple_weather/services/weather_cache_service.dart';
-import 'package:simple_weather/services/weather_service.dart';
-import 'package:simple_weather/widgets/empty_city_view.dart';
-import 'package:simple_weather/widgets/loading_overlay.dart';
-import 'package:simple_weather/widgets/setting_not_complete_view.dart';
-import 'package:simple_weather/widgets/weather_app_bar.dart';
-import 'package:simple_weather/widgets/weather_content_view.dart';
-import 'package:simple_weather/widgets/weather_loading_failed_view.dart';
+import '../models/city_model.dart';
+import '../routes/app_routes.dart';
+import '../services/city_service.dart';
+import '../services/settings_service.dart';
+import '../services/weather_load_controller.dart';
+import '../widgets/empty_city_view.dart';
+import '../widgets/setting_not_complete_view.dart';
+import '../widgets/weather_app_bar.dart';
+import '../widgets/weather_content_view.dart';
+import '../widgets/weather_loading_failed_view.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
+  final WeatherLoadController? controller;
+  const HomeScreen({super.key, this.controller});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final WeatherService _weatherService = WeatherService();
-  final CityService _cityService = CityService();
-  final SettingsService _settingsService = SettingsService();
-  final WeatherCacheService _weatherCacheService = WeatherCacheService();
-  bool _isLoading = false;
-  bool _isScrolling = false;
-  bool _isSettingsComplete = false;
-
-  // 页面滑动处理
-  bool _handleSwipe = true;
-  double _swipeStartX = 0.0;
-  double _swipeDelta = 0.0;
-  final double _dragThreshold = 100.0;
-
-  // 城市相关变量
+  late final WeatherLoadController _weather;
+  final _cityService = CityService();
+  final _settings = SettingsService();
+  final _pages = PageController();
   List<CityModel> _cities = [];
-  int _cityIndex = 0;
-  final Map<String, CityWeatherData> _cityWeatherDataMap = {};
-  PageController _pageController = PageController();
+  int _index = 0;
+  bool _configured = false;
+  bool _initializing = true;
 
   @override
   void initState() {
     super.initState();
+    _weather = widget.controller ?? WeatherLoadController();
+    _weather.addListener(_changed);
     WidgetsBinding.instance.addObserver(this);
-    _loadCities();
-    _loadSettings();
+    _initialize();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _initialize() async {
+    final configured = await _settings.isSettingsComplete();
+    if (!mounted) return;
+    setState(() => _configured = configured);
+    await _loadCities();
+    if (mounted) setState(() => _initializing = false);
+  }
+
+  Future<void> _loadCities() async {
+    final previousId = _cities.isEmpty ? null : _cities[_index].id;
+    final cities = await _cityService.getCities();
+    final selected = await _cityService.getCurrentCity();
+    if (!mounted) return;
+    final selectedId = selected?.id ?? previousId;
+    final index = cities.indexWhere((c) => c.id == selectedId);
+    setState(() {
+      _cities = cities;
+      _index = index < 0 ? 0 : index;
+    });
+    await Future.wait(cities.map(_weather.restore));
+    if (mounted) {
+      setState(() => _initializing = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pages.hasClients && _cities.isNotEmpty) {
+          _pages.jumpToPage(_index);
+        }
+      });
+      _refreshIfNeeded();
+    }
+  }
+
+  Future<void> _refreshIfNeeded() async {
+    if (!_configured || _cities.isEmpty) return;
+    final city = _cities[_index];
+    if (_weather.data(city).isExpired) await _weather.refresh(city);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshIfNeeded();
+  }
+
+  Future<void> _manage() async {
+    await Navigator.pushNamed(context, AppRoutes.cityManagement);
+    if (mounted) await _loadCities();
+  }
+
+  Future<void> _openMap() async {
+    if (_cities.isEmpty) return;
+    final city = _cities[_index];
+    if (city.lat == null || city.lon == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('当前城市暂无坐标')));
+      return;
+    }
+    try {
+      await UrlUtils.launchUrlInBrowser(
+        'https://www.openstreetmap.org/?mlat=${city.lat}&mlon=${city.lon}#map=11/${city.lat}/${city.lon}',
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('暂时无法打开地图，请稍后重试')));
+      }
+    }
+  }
+
+  Future<void> _configure() async {
+    await Navigator.pushNamed(context, AppRoutes.settings);
+    if (!mounted) return;
+    final configured = await _settings.isSettingsComplete();
+    if (!mounted) return;
+    setState(() => _configured = configured);
+    if (configured && _cities.isNotEmpty) {
+      await _weather.refresh(_cities[_index]);
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pageController.dispose();
+    _weather.removeListener(_changed);
+    if (widget.controller == null) _weather.dispose();
+    _pages.dispose();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      _checkAndRefreshWeatherData();
+  Widget build(BuildContext context) {
+    if (_initializing || !_configured || _cities.isEmpty) {
+      return _buildScaffold(context);
     }
-  }
-
-  bool _isValidData(CityWeatherData? data) {
-    return data != null && !data.isExpired && data.hasData;
-  }
-
-  Future<void> _checkAndRefreshWeatherData() async {
-    if (_cities.isEmpty || _cityIndex >= _cities.length) return;
-
-    final city = _cities[_cityIndex];
-    final cityData = _cityWeatherDataMap[city.uniqueName];
-
-    if (!_isValidData(cityData)) {
-      await _loadCityWeather(city, showOverlay: false);
-    }
-  }
-
-  // 加载城市列表
-  Future<void> _loadCities() async {
-    final cities = await _cityService.getCities();
-    final currentCity = await _cityService.getCurrentCity();
-
-    if (cities.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _cities = cities;
-    });
-
-    // 设置当前选中的城市索引
-    if (currentCity != null) {
-      final index = cities.indexWhere((city) => city == currentCity);
-      if (index != -1) {
-        setState(() {
-          _cityIndex = index;
-        });
-        if (_pageController.hasClients) {
-          _pageController.jumpToPage(_cityIndex);
-        } else {
-          _pageController = PageController(initialPage: _cityIndex);
-        }
-      }
-    }
-
-    // 一次性预加载所有城市的缓存数据
-    await _preloadCitiesFromCache();
-
-    // 如果当前城市没有数据或数据过期，则从网络加载
-    if (_cityIndex < _cities.length) {
-      final currentCity = _cities[_cityIndex];
-      final currentCityData = _cityWeatherDataMap[currentCity.uniqueName];
-      if (currentCityData == null ||
-          !currentCityData.hasData ||
-          currentCityData.isExpired) {
-        await _loadCityWeather(currentCity);
-      }
-    }
-  }
-
-  // 从缓存预加载所有城市的天气数据
-  Future<void> _preloadCitiesFromCache() async {
-    for (final city in _cities) {
-      final cachedData = await _weatherCacheService.loadWeatherData(city);
-      if (_isValidData(cachedData)) {
-        setState(() {
-          _cityWeatherDataMap[city.uniqueName] = cachedData!;
-        });
-        if (kDebugMode) {
-          print('从缓存预加载 ${city.name} 的天气数据');
-        }
-      }
-    }
-  }
-
-  Future<void> _loadSettings() async {
-    _isSettingsComplete = await _settingsService.isSettingsComplete();
-    setState(() {});
-  }
-
-  // 加载指定城市的天气数据
-  Future<void> _loadCityWeather(CityModel city, {bool? showOverlay}) async {
-    if (!_cityWeatherDataMap.containsKey(city.uniqueName)) {
-      _cityWeatherDataMap[city.uniqueName] = CityWeatherData(city);
-    }
-
-    final cityData = _cityWeatherDataMap[city.uniqueName]!;
-
-    // 清除之前的错误状态
-    cityData.clearError();
-
-    showOverlay = showOverlay ?? !cityData.hasData;
-
-    if (showOverlay) {
-      setState(() {
-        cityData.isLoading = true;
-        _isLoading = true;
-      });
-    }
-
-    if (!await _weatherService.isApiConfigured()) {
-      _showErrorSnackBar('请先完成API配置', showToSettings: true);
-      if (showOverlay) {
-        setState(() {
-          cityData.isLoading = false;
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    try {
-      final results = await Future.wait<dynamic>([
-        _weatherService.getLiveWeather(lat: city.lat!, lon: city.lon!),
-        _weatherService.getWeatherForecast(
-          lat: city.lat!,
-          lon: city.lon!,
-          forecastDays: ForecastDays.three,
-        ),
-        _weatherService.getHourlyWeather(lat: city.lat!, lon: city.lon!),
-        _weatherService.getWeatherWarnings(lat: city.lat!, lon: city.lon!),
-        _weatherService.getAirQuality(lat: city.lat!, lon: city.lon!),
-      ]);
-
-      setState(() {
-        cityData.weather = LiveWeatherModel.fromJson(results[0]['now']);
-        cityData.lastUpdated = DateTime.now();
-        cityData.dailyForecast =
-            (results[1]['daily'] as List)
-                .map((item) => DailyWeatherModel.fromJson(item))
-                .toList();
-        cityData.hourlyForecast =
-            (results[2]['hourly'] as List)
-                .map((item) => HourlyWeatherModel.fromJson(item))
-                .toList();
-        cityData.warnings = results[3] as List<WeatherWarningModel>;
-        cityData.airQuality = results[4] as AirQualityModel;
-        cityData.isLoading = false;
-
-        // 更新当前页面的数据
-        if (city == _cities[_cityIndex] && showOverlay == true) {
-          _isLoading = false;
-        }
-      });
-
-      // 将天气数据保存到缓存
-      await _weatherCacheService.saveWeatherData(city.uniqueName, cityData);
-    } catch (e) {
-      if (kDebugMode) {
-        print(e);
-      }
-      _showErrorSnackBar(e.toString());
-      if (showOverlay) {
-        setState(() {
-          cityData.isLoading = false;
-
-          if (city == _cities[_cityIndex] && showOverlay == true) {
-            _isLoading = false;
-          }
-
-          cityData.setError(e.toString());
-        });
-      }
-    }
-  }
-
-  Future<void> _loadCurrentCityWeather({
-    bool? showOverlay,
-    bool forceRefresh = false,
-  }) async {
-    if (_cities.isEmpty || _cityIndex >= _cities.length) return;
-
-    final city = _cities[_cityIndex];
-    final cityData = _cityWeatherDataMap[city.uniqueName];
-
-    // 强制刷新或数据无效时，直接从网络加载
-    if (forceRefresh || !_isValidData(cityData)) {
-      return _loadCityWeather(city, showOverlay: showOverlay);
-    }
-
-    // 数据有效且不需要刷新，只更新UI状态
-    if (showOverlay == true) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  // 页面切换回调
-  void _onPageChanged(int index) async {
-    if (index < 0 || index >= _cities.length) return;
-
-    final city = _cities[index];
-    final cityData = _cityWeatherDataMap[city.uniqueName];
-
-    setState(() {
-      _cityIndex = index;
-      if (cityData != null) {
-        _isLoading = cityData.isLoading;
-      }
-    });
-
-    // 如果数据无效，直接从网络加载，不再检查缓存
-    if (!_isValidData(cityData)) {
-      _loadCityWeather(city);
-    }
-  }
-
-  // 显示错误提示
-  void _showErrorSnackBar(String message, {bool showToSettings = false}) {
-    if (!mounted) return;
-
-    // 移除当前显示的 SnackBar
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action:
-            showToSettings
-                ? SnackBarAction(label: '去设置', onPressed: _onSettingsPressed)
-                : null,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    final scene = WeatherScene.fromWeather(
+      _weather.data(_cities[_index]).weather,
+    );
+    final base = Theme.of(context);
+    final dark = base.brightness == Brightness.dark;
+    final homeTheme = base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        onSurface: Colors.white,
+        onSurfaceVariant: const Color(0xFFD6EDF5),
+        primary: const Color(0xFFB9E9FF),
+        surface: dark ? const Color(0xFF102A40) : const Color(0xFF6395AD),
+      ),
+      textTheme: base.textTheme.apply(
+        bodyColor: Colors.white,
+        displayColor: Colors.white,
+      ),
+      iconTheme: const IconThemeData(color: Colors.white),
+    );
+    return Theme(
+      data: homeTheme,
+      child: Builder(
+        builder:
+            (context) => Stack(
+              fit: StackFit.expand,
+              children: [
+                WeatherSceneBackground(scene: scene),
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors:
+                            dark
+                                ? const [Color(0x66071525), Color(0xCC0A192B)]
+                                : const [Color(0x001E648F), Color(0x665F98A5)],
+                      ),
+                    ),
+                  ),
+                ),
+                _buildScaffold(context),
+              ],
+            ),
       ),
     );
   }
 
-  // 城市管理
-  void _onCityManagement() async {
-    await Navigator.pushNamed(context, AppRoutes.cityManagement);
-    _loadCities();
-  }
-
-  // 设置按钮点击回调
-  Future<void> _onSettingsPressed() async {
-    final result = await Navigator.pushNamed(context, AppRoutes.settings);
-    if (result == true) {
-      _loadSettings();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (ModalRoute.of(context)?.settings.name == '/settings') {
-          await _loadCurrentCityWeather();
-        }
-      },
-      child: Stack(
-        children: [
-          GestureDetector(
-            onHorizontalDragStart: (details) {
-              // 如果没有城市或只有一个城市，不处理滑动
-              if (_cities.isEmpty || _cities.length <= 1) {
-                return;
-              }
-              setState(() {
-                _swipeStartX = details.localPosition.dx;
-                _swipeDelta = 0.0;
-                _handleSwipe = true;
-              });
-            },
-            onHorizontalDragUpdate: (details) {
-              // 如果不处理滑动，直接返回
-              if (!_handleSwipe) return;
-
-              // 计算水平滑动距离
-              _swipeDelta = details.localPosition.dx - _swipeStartX;
-
-              // 判断是否应该处理为水平滑动
-              double verticalDelta =
-                  (details.localPosition.dy - details.globalPosition.dy).abs();
-              double horizontalDelta = _swipeDelta.abs();
-
-              // 如果垂直滑动距离大于水平滑动距离的1.2倍，不处理水平滑动
-              if (verticalDelta > horizontalDelta * 1.2 &&
-                  horizontalDelta < 20) {
-                setState(() {
-                  _handleSwipe = false;
-                });
-                return;
-              }
-
-              // 直接控制PageView的滚动位置实现过渡效果
-              if (_pageController.hasClients) {
-                final currentOffset = _pageController.offset;
-                final targetOffset = currentOffset - details.delta.dx;
-
-                // 确保不超出边界
-                final maxOffset =
-                    MediaQuery.of(context).size.width * (_cities.length - 1);
-                final boundedOffset = targetOffset.clamp(0.0, maxOffset);
-
-                // 直接设置滚动位置
-                _pageController.position.jumpTo(boundedOffset);
-              }
-            },
-            onHorizontalDragEnd: (details) {
-              // 如果不处理滑动，直接返回
-              if (!_handleSwipe) return;
-
-              double velocity = details.primaryVelocity ?? 0;
-              double currentPage =
-                  _pageController.page ?? _cityIndex.toDouble();
-
-              // 根据滑动距离和速度决定是否切换页面
-              if (_swipeDelta.abs() > _dragThreshold || velocity.abs() > 100) {
-                int targetPage;
-
-                if (_swipeDelta > 0 || velocity > 100) {
-                  // 向右滑动，显示上一个城市
-                  targetPage = currentPage.floor();
-                  if (targetPage == currentPage && targetPage > 0) {
-                    targetPage -= 1;
-                  }
-                } else {
-                  // 向左滑动，显示下一个城市
-                  targetPage = currentPage.ceil();
-                  if (targetPage == currentPage &&
-                      targetPage < _cities.length - 1) {
-                    targetPage += 1;
-                  }
-                }
-
-                // 确保目标页面在有效范围内
-                targetPage = targetPage.clamp(0, _cities.length - 1);
-
-                // 平滑切换到目标页面
-                _pageController.animateToPage(
-                  targetPage,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
-                );
-              } else {
-                // 回弹到当前页面
-                _pageController.animateToPage(
-                  currentPage.round(),
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                );
-              }
-            },
-            child: Scaffold(
-              backgroundColor: colorScheme.surface,
-              floatingActionButton:
-                  _cities.isEmpty
-                      ? null
-                      : AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: _isScrolling ? 0.5 : 1.0,
-                        child: FloatingActionButton(
-                          onPressed: _onCityManagement,
-                          tooltip: '城市管理',
-                          child: const Icon(Icons.location_city),
+  Widget _buildScaffold(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          _configured && _cities.isNotEmpty ? Colors.transparent : null,
+      extendBody: true,
+      bottomNavigationBar:
+          _configured && _cities.isNotEmpty
+              ? WeatherBottomBar(
+                cityCount: _cities.length,
+                currentIndex: _index,
+                onCitySelected:
+                    (index) => _pages.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    ),
+                onMap: _openMap,
+                onCities: _manage,
+              )
+              : null,
+      body:
+          _initializing
+              ? const Center(child: WeatherLoadingDots())
+              : !_configured
+              ? SettingNotCompleteView(onSettings: _configure)
+              : _cities.isEmpty
+              ? EmptyCityView(onAddCity: _manage)
+              : ScrollConfiguration(
+                // Stretch overscroll introduces an offscreen layer that changes
+                // backdrop-filter sampling while the finger is held at an edge.
+                behavior: ScrollConfiguration.of(
+                  context,
+                ).copyWith(overscroll: false),
+                child: PageView.builder(
+                  controller: _pages,
+                  itemCount: _cities.length,
+                  onPageChanged: (index) {
+                    if (index >= _cities.length) return;
+                    setState(() => _index = index);
+                    _cityService.setCurrentCity(_cities[index]);
+                    _refreshIfNeeded();
+                  },
+                  itemBuilder: (context, index) {
+                    final city = _cities[index];
+                    final data = _weather.data(city);
+                    final daily = data.dailyForecast;
+                    return WeatherRefreshIndicator(
+                      onRefresh: () => _weather.refresh(city),
+                      child: CustomScrollView(
+                        key: PageStorageKey('weather-${city.id}'),
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: ClampingScrollPhysics(),
                         ),
-                      ),
-              body:
-                  !_isSettingsComplete
-                      ? SettingNotCompleteView(onSettings: _onSettingsPressed)
-                      : _cities.isEmpty
-                      ? EmptyCityView(onAddCity: _onCityManagement)
-                      : NotificationListener<ScrollNotification>(
-                        onNotification: (ScrollNotification notification) {
-                          if (notification is ScrollStartNotification) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              setState(() {
-                                _isScrolling = true;
-                              });
-                            });
-                          } else if (notification is ScrollEndNotification) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              setState(() {
-                                _isScrolling = false;
-                              });
-                            });
-                          }
-                          return false;
-                        },
-                        child: NestedScrollView(
-                          headerSliverBuilder: (context, innerBoxIsScrolled) {
-                            final currentCity = _cities[_cityIndex];
-                            final currentCityData =
-                                _cityWeatherDataMap[currentCity.uniqueName];
-
-                            return [
-                              WeatherAppBar(
-                                weather: currentCityData?.weather,
-                                dailyForecast:
-                                    currentCityData?.dailyForecast?.first,
-                                cityName: currentCityData?.city.name,
-                                currentCityIndex: _cityIndex,
-                                totalCities: _cities.length,
-                                pageController: _pageController,
-                                onSettingsPressed: _onSettingsPressed,
-                              ),
-                            ];
-                          },
-                          body: PageView.builder(
-                            controller: _pageController,
-                            onPageChanged: _onPageChanged,
-                            itemCount: _cities.length,
-                            physics:
-                                const BouncingScrollPhysics(), // 使用支持回弹效果的滚动物理
-                            itemBuilder: (context, index) {
-                              if (index < 0 || index >= _cities.length) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final city = _cities[index];
-                              final cityData =
-                                  _cityWeatherDataMap[city.uniqueName];
-
-                              // 显示加载失败视图
-                              if (cityData?.hasError == true) {
-                                return WeatherLoadingFailedView(
-                                  errorMessage: cityData!.errorMessage,
-                                  onRetry:
-                                      () => _loadCityWeather(
-                                        city,
-                                        showOverlay: true,
-                                      ),
-                                );
-                              }
-
-                              if (cityData?.weather == null) {
-                                return const SizedBox.shrink();
-                              }
-
-                              return WeatherContentView(
-                                weather: cityData!.weather!,
-                                dailyForecast: cityData.dailyForecast,
-                                hourlyForecast: cityData.hourlyForecast,
-                                warnings: cityData.warnings,
-                                airQuality: cityData.airQuality,
-                                city: city,
-                                onRefresh:
-                                    () => _loadCurrentCityWeather(
-                                      forceRefresh: true,
-                                    ),
-                              );
-                            },
+                        slivers: [
+                          WeatherAppBar(
+                            weather: data.weather,
+                            dailyForecast:
+                                daily == null || daily.isEmpty
+                                    ? null
+                                    : daily.first,
+                            cityName: city.name,
+                            currentCityIndex: index,
+                            totalCities: _cities.length,
+                            pageController: _pages,
+                            onSettingsPressed: _configure,
                           ),
-                        ),
+                          if (!data.hasData)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child:
+                                  data.isLoading
+                                      ? const Center(child: WeatherLoadingDots())
+                                      : WeatherLoadingFailedView(
+                                        onRetry: () => _weather.refresh(city),
+                                      ),
+                            )
+                          else
+                            WeatherContentView(
+                              data: data,
+                              onMap: _openMap,
+                              onRetry: (module) => _weather.retry(city, module),
+                            ),
+                        ],
                       ),
-            ),
-          ),
-          LoadingOverlay(isLoading: _isLoading),
-        ],
-      ),
+                    );
+                  },
+                ),
+              ),
     );
   }
 }

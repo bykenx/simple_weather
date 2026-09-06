@@ -34,8 +34,12 @@ class AirQualityModel {
             pollutant.containsKey('concentration') &&
             pollutant['concentration'] is Map &&
             pollutant['concentration'].containsKey('value')) {
-          final value = pollutant['concentration']['value'] as double;
-          pollutants[pollutant['code']] = value;
+          final value = double.tryParse(
+            pollutant['concentration']['value'].toString(),
+          );
+          if (value != null && value.isFinite) {
+            pollutants[pollutant['code']] = value;
+          }
         }
       }
     }
@@ -46,7 +50,7 @@ class AirQualityModel {
               ? json['aqi']
               : json['aqi'] is int
               ? json['aqi'].toDouble()
-              : 0.0,
+              : double.nan,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
       category: json['category'] ?? '',

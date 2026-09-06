@@ -1,11 +1,11 @@
+import 'utils/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:simple_weather/routes/app_routes.dart';
 import 'package:simple_weather/services/settings_service.dart';
-import 'package:simple_weather/utils/weather_icon_utils.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await WeatherIconUtils.ensureInitialized();
   await SettingsService().ensureInitialized();
   runApp(const MyApp());
 }
@@ -21,19 +21,13 @@ class MyApp extends StatelessWidget {
       builder: (context, darkModeEnabled, _) {
         return MaterialApp(
           title: '简单天气',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blue,
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-          ),
+          theme: AppTheme.build(Brightness.light),
+          darkTheme: AppTheme.build(Brightness.dark),
           themeMode: darkModeEnabled ? ThemeMode.dark : ThemeMode.light,
-          initialRoute: AppRoutes.home,
+          initialRoute:
+              kDebugMode && const bool.fromEnvironment('WEATHER_PREVIEW')
+                  ? AppRoutes.weatherPreview
+                  : AppRoutes.home,
           onGenerateRoute: AppRoutes.generateRoute,
         );
       },

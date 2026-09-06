@@ -65,6 +65,6 @@ class AirQualityUtils {
   }
 
   static String getAqiDisplayValue(double aqi) {
-    return aqi.round().toString();
+    return aqi.isFinite ? aqi.round().toString() : '暂无数据';
   }
 }

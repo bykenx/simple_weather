@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/weather_model.dart';
-import 'package:simple_weather/utils/weather_icon_utils.dart';
 
 class CurrentWeatherInfo extends StatelessWidget {
   final LiveWeatherModel weather;
@@ -12,38 +11,50 @@ class CurrentWeatherInfo extends StatelessWidget {
     this.dailyForecast,
   });
 
+  String _temperature(double? value) =>
+      value != null && value.isFinite ? '${value.round()}°' : '--';
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Icon(
-            WeatherIconUtils.getWeatherIcon(weather.icon, filled: true),
-            size: 80,
-            color: colorScheme.primary,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _temperature(weather.temp),
+          style: const TextStyle(
+            fontSize: 88,
+            fontWeight: FontWeight.w200,
+            height: 1.05,
+            letterSpacing: -4,
           ),
-          const SizedBox(height: 10),
-          Text(
-            '${weather.temp.toStringAsFixed(1)}°C',
-            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            WeatherIconUtils.getIconDescription(weather.icon),
-            style: const TextStyle(fontSize: 16),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('最高 ${dailyForecast?.maxTemp.toStringAsFixed(1)}°C'),
-              const SizedBox(width: 10),
-              Text('最低 ${dailyForecast?.minTemp.toStringAsFixed(1)}°C'),
-            ],
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 18,
+          children: [
+            _extreme('最\n高', dailyForecast?.maxTemp),
+            _extreme('最\n低', dailyForecast?.minTemp),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          weather.text,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
+
+  Widget _extreme(String label, double? temperature) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 14, height: 1.05)),
+      const SizedBox(width: 5),
+      Text(
+        _temperature(temperature),
+        style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w300),
+      ),
+    ],
+  );
 }

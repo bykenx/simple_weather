@@ -28,48 +28,11 @@ class CurrentCityWeather extends StatelessWidget {
         // 城市名称
         Text(
           cityName,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w400),
         ),
         // 天气信息
-        CurrentWeatherInfo(
-          weather: weather,
-          dailyForecast: dailyForecast,
-        ),
-        // 城市指示器
-        if (totalCities > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                totalCities,
-                (index) => GestureDetector(
-                  onTap: () {
-                    pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: currentIndex == index
-                          ? Colors.blue
-                          : Colors.blue.withValues(alpha: 0.3),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+        CurrentWeatherInfo(weather: weather, dailyForecast: dailyForecast),
       ],
     );
   }
-} 
+}

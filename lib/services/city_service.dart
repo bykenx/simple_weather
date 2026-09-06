@@ -34,7 +34,18 @@ class CityService {
     final cities = await getCities();
     cities.removeWhere((city) => city.id == cityId);
     await _saveCities(cities);
+    final current = await getCurrentCity();
+    if (current?.id == cityId || cities.isEmpty) {
+      if (cities.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_currentCityKey);
+      } else {
+        await setCurrentCity(cities.first);
+      }
+    }
   }
+
+  Future<void> reorderCities(List<CityModel> cities) => _saveCities(cities);
 
   Future<CityModel?> getCurrentCity() async {
     final prefs = await SharedPreferences.getInstance();
@@ -50,9 +61,10 @@ class CityService {
 
   Future<void> _saveCities(List<CityModel> cities) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
+    final saved = await prefs.setStringList(
       _citiesKey,
       cities.map((c) => jsonEncode(c.toJson())).toList(),
     );
+    if (!saved) throw StateError('保存城市顺序失败');
   }
 }

@@ -68,11 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
+            pinned: true,
             backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('设置'),
               centerTitle: true,
+              expandedTitleScale: 1.5,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -216,9 +218,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
+                                Text(
                                   '如何获取配置信息：',
-                                  style: TextStyle(color: Colors.grey),
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 RichText(

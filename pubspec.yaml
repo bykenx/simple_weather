@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.1+2
+version: 1.1.0+3
 
 environment:
   sdk: ^3.7.2
@@ -62,8 +62,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  shaders:
+    - shaders/weather_atmosphere.frag
+    - shaders/moon_phase_sphere.frag
+    - shaders/weather_crescent.frag
+
   assets:
     - assets/qweather_weather_code_map.json
+    - assets/moon/Moon02.jpg
+    - assets/moon/Moon03Bump.jpg
 
   fonts:
     - family: QWeatherIcons

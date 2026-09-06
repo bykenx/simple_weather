@@ -1,3 +1,4 @@
+import '../utils/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/services/weather_service.dart';
@@ -33,7 +34,7 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
     try {
       // 尝试从缓存加载热门城市列表
       final cachedHotCities = await _weatherCacheService.loadHotCities();
-      
+
       if (cachedHotCities != null) {
         setState(() {
           _hotCities = cachedHotCities;
@@ -44,17 +45,17 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
         }
         return;
       }
-      
+
       // 如果缓存不存在或已过期，从网络加载
       final hotCitiesJson = await _weatherService.getHotCities();
       final cities =
           (hotCitiesJson['topCityList'] as List)
               .map((json) => CityModel.fromJson(json))
               .toList();
-      
+
       // 保存到缓存
       await _weatherCacheService.saveHotCities(cities);
-      
+
       setState(() {
         _hotCities = cities;
         _isLoading = false;
@@ -149,11 +150,13 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
+            pinned: true,
             backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('添加城市'),
               centerTitle: true,
+              expandedTitleScale: 1.5,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -216,56 +219,55 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
                             ),
                           ),
                         ),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(16.0),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 1.5,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
-                          itemCount: _hotCities.length,
-                          itemBuilder: (context, index) {
-                            final city = _hotCities[index];
-                            return InkWell(
-                              onTap: () => _addCity(city),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withValues(alpha: 0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.location_city,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      city.name,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final tileWidth = (constraints.maxWidth - 20) / 3;
+                              return Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: List.generate(_hotCities.length, (
+                                  index,
+                                ) {
+                                  final city = _hotCities[index];
+                                  return InkWell(
+                                    onTap: () => _addCity(city),
+                                    child: Container(
+                                      width: tileWidth,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 12,
                                       ),
-                                      textAlign: TextAlign.center,
+                                      decoration: AppTheme.cardDecoration(
+                                        context,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.location_city,
+                                            color: colorScheme.primary,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            city.name,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                                  );
+                                }),
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),

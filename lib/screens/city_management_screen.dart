@@ -5,7 +5,8 @@ import 'package:simple_weather/services/city_service.dart';
 import 'package:simple_weather/widgets/city_card.dart';
 
 class CityManagementScreen extends StatefulWidget {
-  const CityManagementScreen({super.key});
+  final Future<void> Function(List<CityModel>)? saveOrder;
+  const CityManagementScreen({super.key, this.saveOrder});
 
   @override
   State<CityManagementScreen> createState() => _CityManagementScreenState();
@@ -16,6 +17,7 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
   List<CityModel> _cities = [];
   CityModel? _currentCity;
   bool _isLoading = true;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -26,6 +28,7 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
   Future<void> _loadCities() async {
     final cities = await _cityService.getCities();
     final currentCity = await _cityService.getCurrentCity();
+    if (!mounted) return;
     setState(() {
       _cities = cities;
       _currentCity = currentCity;
@@ -46,6 +49,29 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
     }
   }
 
+  Future<void> _reorder(int oldIndex, int newIndex) async {
+    if (_saving) return;
+    final previous = List<CityModel>.of(_cities);
+    setState(() {
+      _saving = true;
+      if (newIndex > oldIndex) newIndex--;
+      final city = _cities.removeAt(oldIndex);
+      _cities.insert(newIndex, city);
+    });
+    try {
+      await (widget.saveOrder ?? _cityService.reorderCities)(_cities);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _cities = previous);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('保存城市顺序失败，请重试')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -56,11 +82,13 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
           SliverAppBar(
             expandedHeight: 100.0,
             floating: false,
+            pinned: true,
             backgroundColor: colorScheme.surface,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text('城市管理'),
               centerTitle: true,
+              expandedTitleScale: 1.5,
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -74,15 +102,18 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.search),
-                onPressed: () async {
-                  final result = await Navigator.pushNamed<bool>(
-                    context,
-                    AppRoutes.citySearch,
-                  );
-                  if (result == true) {
-                    _loadCities(); // 如果返回 true，则刷新城市列表
-                  }
-                },
+                onPressed:
+                    _saving
+                        ? null
+                        : () async {
+                          final result = await Navigator.pushNamed<bool>(
+                            context,
+                            AppRoutes.citySearch,
+                          );
+                          if (result == true) {
+                            _loadCities(); // 如果返回 true，则刷新城市列表
+                          }
+                        },
               ),
             ],
           ),
@@ -113,7 +144,9 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
                         ],
                       ),
                     )
-                    : ListView.builder(
+                    : ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
+                      onReorder: _reorder,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _cities.length,
@@ -121,15 +154,40 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
                         final city = _cities[index];
                         final isCurrent = _currentCity?.id == city.id;
                         return Container(
+                          key: ValueKey(city.id),
                           margin: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          child: CityCard(
-                            city: city,
-                            isCurrent: isCurrent,
-                            onDelete: () => _deleteCity(city),
-                            onTap: () => _setCurrentCity(city),
+                          child: IgnorePointer(
+                            ignoring: _saving,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: CityCard(
+                                    city: city,
+                                    isCurrent: isCurrent,
+                                    onDelete: () {
+                                      if (!_saving) _deleteCity(city);
+                                    },
+                                    onTap: () {
+                                      if (!_saving) _setCurrentCity(city);
+                                    },
+                                  ),
+                                ),
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  enabled: !_saving,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Icon(
+                                      Icons.drag_handle,
+                                      semanticLabel: '拖动排序',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },

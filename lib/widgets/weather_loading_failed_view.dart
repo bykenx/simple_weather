@@ -12,22 +12,16 @@ class WeatherLoadingFailedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.cloud_off,
-            size: 70,
-            color: Colors.grey,
-          ),
+          Icon(Icons.cloud_off, size: 70, color: colors.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             '天气数据加载失败',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
           if (errorMessage != null && errorMessage!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -36,10 +30,7 @@ class WeatherLoadingFailedView extends StatelessWidget {
               child: Text(
                 errorMessage!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
               ),
             ),
           ],
@@ -49,12 +40,9 @@ class WeatherLoadingFailedView extends StatelessWidget {
             icon: const Icon(Icons.refresh),
             label: const Text('重试'),
             style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.blue,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
+              foregroundColor: colors.onPrimary,
+              backgroundColor: colors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -64,4 +52,4 @@ class WeatherLoadingFailedView extends StatelessWidget {
       ),
     );
   }
-} 
+}

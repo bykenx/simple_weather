@@ -1,130 +1,129 @@
 import 'package:flutter/material.dart';
-import 'package:simple_weather/models/weather_model.dart';
-import 'package:simple_weather/utils/weather_icon_utils.dart';
+import '../models/weather_model.dart';
+import '../utils/weather_icon_utils.dart';
+import 'weather_card_surface.dart';
 
 class HourlyForecastCard extends StatelessWidget {
   final List<HourlyWeatherModel> hourlyForecast;
-
-  const HourlyForecastCard({super.key, required this.hourlyForecast});
+  final VoidCallback onTap;
+  const HourlyForecastCard({
+    super.key,
+    required this.hourlyForecast,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // 使用本地时区的当前时间
-    final now = DateTime.now().toLocal();
-    
-    // 过滤掉当前时间之前的数据
-    final filteredForecast = hourlyForecast.where((forecast) {
-      // 确保API返回的时间也是本地时区
-      final forecastLocalTime = forecast.time.toLocal();
-      return forecastLocalTime.isAfter(now.subtract(const Duration(minutes: 30)));
-    }).toList();
+    final colors = Theme.of(context).colorScheme;
+    // Keep the home-card preview compact; the drawer receives all 240 hours.
+    final hours = hourlyForecast.take(24).toList();
+    final wet =
+        hours
+            .where((hour) => hour.precip.isFinite && hour.precip > 0)
+            .firstOrNull;
+    final summary = wet == null ? '逐小时天气预报' : '${wet.time.hour}时有降水预报。';
+    return GestureDetector(
+      onTap: onTap,
+      child: WeatherCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: hours.isEmpty ? null : onTap,
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: Theme.of(context).cardColor.withValues(alpha: 0.85),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '逐小时天气预报',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: filteredForecast.length,
-                  itemBuilder: (context, index) {
-                    final hourData = filteredForecast[index];
-                    final hourLocalTime = hourData.time.toLocal();
-
-                    final diffMinutes = hourLocalTime.difference(now).inMinutes;
-                    final isCurrentHour = diffMinutes.abs() <= 30;
-
-                    String timeText;
-                    if (isCurrentHour) {
-                      timeText = '现在';
-                    } else if (hourLocalTime.hour == 0) {
-                      timeText = '${hourLocalTime.month}/${hourLocalTime.day}';
-                    } else {
-                      timeText = '${hourLocalTime.hour}:00';
-                    }
-
-                    return Container(
-                      width: 80,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: Column(
-                        children: [
-                          Text(
-                            timeText,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          Icon(
-                            WeatherIconUtils.getWeatherIcon(
-                              hourData.icon,
-                              filled: true,
-                            ),
-                            size: 24,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _getWindOrRainText(hourData),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  hourData.pop != null && hourData.pop! > 0
-                                      ? colorScheme.primary
-                                      : colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${hourData.temp.toStringAsFixed(1)}°C',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        summary,
+                        style: const TextStyle(fontSize: 14),
                       ),
-                    );
-                  },
+                    ),
+                    Semantics(
+                      label: '查看天气趋势',
+                      child: const Icon(Icons.chevron_right, size: 18),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Divider(
+              height: 1,
+              color: colors.outlineVariant.withValues(alpha: .3),
+            ),
+            if (hours.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('暂无逐小时预报'),
+              ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:
+                    hours.map((hour) {
+                      final time = hour.time;
+                      final label =
+                          hour == hours.first
+                              ? '现在'
+                              : time.hour == 0
+                              ? '${time.month}/${time.day}'
+                              : '${time.hour}时';
+                      return SizedBox(
+                        width: 54,
+                        child: Column(
+                          children: [
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Icon(
+                              WeatherIconUtils.getWeatherIcon(
+                                hour.icon,
+                                filled: true,
+                              ),
+                              size: 26,
+                              color: colors.onSurface,
+                            ),
+                            SizedBox(
+                              height: 22,
+                              child: Text(
+                                hour.pop != null &&
+                                        hour.pop!.isFinite &&
+                                        hour.pop! > 0
+                                    ? '${hour.pop!.round()}%'
+                                    : '',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.primary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              hour.temp.isFinite
+                                  ? '${hour.temp.round()}°'
+                                  : '--',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ),
+          ],
         ),
       ),
     );
-  }
-  
-  // 获取风级或降雨概率文本
-  String _getWindOrRainText(HourlyWeatherModel data) {
-    if (data.pop != null && data.pop! > 0) {
-      return '${data.pop!.toStringAsFixed(0)}%';
-    } else {
-      return '${data.windScale}级';
-    }
   }
 }

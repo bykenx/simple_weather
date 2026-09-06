@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../screens/weather_preview_screen.dart';
 import 'package:simple_weather/screens/city_management_screen.dart';
 import 'package:simple_weather/screens/city_search_screen.dart';
 import 'package:simple_weather/screens/home_screen.dart';
 import 'package:simple_weather/screens/settings_screen.dart';
-import 'package:simple_weather/screens/warning_detail_screen.dart';
-import 'package:simple_weather/screens/air_quality_detail_screen.dart';
-import 'package:simple_weather/screens/extended_forecast_screen.dart';
-import 'package:simple_weather/models/weather_model.dart';
-import 'package:simple_weather/models/air_quality_model.dart';
-import 'package:simple_weather/models/city_model.dart';
 
 class AppRoutes {
   static const String home = '/';
+  static const String weatherPreview = '/weather-preview';
   static const String cityManagement = '/city-management';
   static const String citySearch = '/city-search';
   static const String settings = '/settings';
-  static const String warningDetail = '/warning-detail';
-  static const String airQualityDetail = '/air-quality-detail';
-  static const String extendedForecast = '/extended-forecast';
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
+    if (kDebugMode && routeSettings.name == weatherPreview) {
+      return MaterialPageRoute(
+        settings: routeSettings,
+        builder: (_) => const WeatherPreviewScreen(),
+      );
+    }
     switch (routeSettings.name) {
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
@@ -31,21 +31,6 @@ class AppRoutes {
         );
       case settings:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
-      case warningDetail:
-        final warning = routeSettings.arguments as WeatherWarningModel;
-        return MaterialPageRoute(
-          builder: (_) => WarningDetailScreen(warning: warning),
-        );
-      case airQualityDetail:
-        final airQuality = routeSettings.arguments as AirQualityModel;
-        return MaterialPageRoute(
-          builder: (_) => AirQualityDetailScreen(airQuality: airQuality),
-        );
-      case extendedForecast:
-        final currentCity = routeSettings.arguments as CityModel;
-        return MaterialPageRoute(
-          builder: (_) => ExtendedForecastScreen(currentCity: currentCity),
-        );
       default:
         return MaterialPageRoute(
           builder:
