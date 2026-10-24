@@ -46,17 +46,6 @@ class DailyForecastDetails {
       16,
     ); // localTime=true; keep the location's wall clock.
   }
-
-  static const moonNames = {
-    'new-moon': '新月',
-    'waxing-crescent': '蛾眉月',
-    'first-quarter': '上弦月',
-    'waxing-gibbous': '盈凸月',
-    'full-moon': '满月',
-    'waning-gibbous': '亏凸月',
-    'last-quarter': '下弦月',
-    'waning-crescent': '残月',
-  };
 }
 
 class ForecastPeriod {

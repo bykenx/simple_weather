@@ -154,31 +154,6 @@ class WeatherService {
     return Map<String, dynamic>.from(response.data);
   }
 
-  Future<Map<String, dynamic>> getMoonAstronomy({
-    required double lat,
-    required double lon,
-    required DateTime date,
-  }) async {
-    final host = await _getApiHost();
-    final key = await _getApiKey();
-    final response = await _httpService.get(
-      'https://$host/v7/astronomy/moon',
-      queryParameters: {
-        'location': '${lon.toStringAsFixed(2)},${lat.toStringAsFixed(2)}',
-        'date':
-            '${date.year.toString().padLeft(4, '0')}'
-            '${date.month.toString().padLeft(2, '0')}'
-            '${date.day.toString().padLeft(2, '0')}',
-        'lang': 'zh',
-        'key': key,
-      },
-    );
-    if (response.data is! Map || response.data['code'] != '200') {
-      throw '获取月相数据失败';
-    }
-    return Map<String, dynamic>.from(response.data);
-  }
-
   Future<Map<String, dynamic>> getHourlyWeather({
     double? lat,
     double? lon,

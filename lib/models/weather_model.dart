@@ -10,10 +10,9 @@ class DailyWeatherModel {
   final double humidity;
   final double windSpeed;
 
-  final String? sunrise, sunset, moonrise, moonset, moonPhase, moonPhaseIcon;
+  final String? sunrise, sunset;
   final String? windDir, windScale;
   final double? uvIndex, precip;
-  final List<MoonPhaseHour> moonPhases;
 
   DailyWeatherModel({
     required this.date,
@@ -28,24 +27,11 @@ class DailyWeatherModel {
     this.windScale,
     this.sunrise,
     this.sunset,
-    this.moonrise,
-    this.moonset,
-    this.moonPhase,
-    this.moonPhaseIcon,
     this.uvIndex,
     this.precip,
-    this.moonPhases = const [],
   });
 
   factory DailyWeatherModel.fromJson(Map<String, dynamic> json) {
-    final moonPhases =
-        (json['_moonPhaseHourly'] as List? ?? const [])
-            .whereType<Map>()
-            .map(
-              (item) => MoonPhaseHour.fromJson(Map<String, dynamic>.from(item)),
-            )
-            .whereType<MoonPhaseHour>()
-            .toList();
     if (json.containsKey('forecastStartTime')) {
       final details = DailyForecastDetails(json);
       final day = details.daytime;
@@ -71,14 +57,6 @@ class DailyWeatherModel {
         uvIndex: details.uvIndex,
         sunrise: DailyForecastDetails.clock(astro['sunrise']),
         sunset: DailyForecastDetails.clock(astro['sunset']),
-        moonrise: DailyForecastDetails.clock(
-          json['_moonrise'] ?? astro['moonrise'],
-        ),
-        moonset: DailyForecastDetails.clock(
-          json['_moonset'] ?? astro['moonset'],
-        ),
-        moonPhase: DailyForecastDetails.moonNames[astro['moonPhase']],
-        moonPhases: moonPhases,
       );
     }
     return DailyWeatherModel(
@@ -87,15 +65,6 @@ class DailyWeatherModel {
       windScale: json['windScaleDay']?.toString(),
       sunrise: json['sunrise']?.toString(),
       sunset: json['sunset']?.toString(),
-      moonrise:
-          DailyForecastDetails.clock(json['_moonrise']) ??
-          json['moonrise']?.toString(),
-      moonset:
-          DailyForecastDetails.clock(json['_moonset']) ??
-          json['moonset']?.toString(),
-      moonPhase: json['moonPhase']?.toString(),
-      moonPhaseIcon: json['moonPhaseIcon']?.toString(),
-      moonPhases: moonPhases,
       uvIndex: double.tryParse(json['uvIndex']?.toString() ?? ''),
       precip: double.tryParse(json['precip']?.toString() ?? ''),
       icon: json['iconDay'],
@@ -115,11 +84,6 @@ class DailyWeatherModel {
       'windScaleDay': windScale,
       'sunrise': sunrise,
       'sunset': sunset,
-      'moonrise': moonrise,
-      'moonset': moonset,
-      'moonPhase': moonPhase,
-      'moonPhaseIcon': moonPhaseIcon,
-      '_moonPhaseHourly': moonPhases.map((phase) => phase.toJson()).toList(),
       'uvIndex': uvIndex?.toString(),
       'precip': precip?.toString(),
       'iconDay': icon,
@@ -130,62 +94,6 @@ class DailyWeatherModel {
       'windSpeedDay': windSpeed.toString(),
     };
   }
-
-  MoonPhaseHour? moonPhaseAt(DateTime time) {
-    if (moonPhases.isEmpty) return null;
-    return moonPhases.reduce(
-      (a, b) =>
-          a.time.difference(time).abs() <= b.time.difference(time).abs()
-              ? a
-              : b,
-    );
-  }
-}
-
-class MoonPhaseHour {
-  final DateTime time;
-  final double value;
-  final double illumination;
-  final String name;
-  final String icon;
-
-  const MoonPhaseHour({
-    required this.time,
-    required this.value,
-    required this.illumination,
-    required this.name,
-    required this.icon,
-  });
-
-  static MoonPhaseHour? fromJson(Map<String, dynamic> json) {
-    final time = DateTime.tryParse(json['fxTime']?.toString() ?? '');
-    final value = double.tryParse(json['value']?.toString() ?? '');
-    final illumination = double.tryParse(
-      json['illumination']?.toString() ?? '',
-    );
-    if (time == null ||
-        value == null ||
-        !value.isFinite ||
-        illumination == null ||
-        !illumination.isFinite) {
-      return null;
-    }
-    return MoonPhaseHour(
-      time: time,
-      value: value.clamp(0, 1),
-      illumination: illumination.clamp(0, 100),
-      name: json['name']?.toString() ?? '',
-      icon: json['icon']?.toString() ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'fxTime': time.toIso8601String(),
-    'value': value.toString(),
-    'illumination': illumination.toString(),
-    'name': name,
-    'icon': icon,
-  };
 }
 
 class LiveWeatherModel {

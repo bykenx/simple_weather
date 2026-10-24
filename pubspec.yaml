@@ -64,13 +64,10 @@ flutter:
 
   shaders:
     - shaders/weather_atmosphere.frag
-    - shaders/moon_phase_sphere.frag
     - shaders/weather_crescent.frag
 
   assets:
     - assets/qweather_weather_code_map.json
-    - assets/moon/Moon02.jpg
-    - assets/moon/Moon03Bump.jpg
 
   fonts:
     - family: QWeatherIcons

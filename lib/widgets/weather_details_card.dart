@@ -1,24 +1,13 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
-import '../utils/moon_orientation_utils.dart';
 import 'weather_card_surface.dart';
-import 'moon_renderers.dart';
 
 class WeatherDetailsCard extends StatelessWidget {
   final LiveWeatherModel weather;
   final DailyWeatherModel? daily;
-  final List<DailyWeatherModel> dailyForecast;
-  final double? latitude;
-  final double? longitude;
-  const WeatherDetailsCard({
-    super.key,
-    required this.weather,
-    this.daily,
-    this.dailyForecast = const [],
-    this.latitude,
-    this.longitude,
-  });
+  const WeatherDetailsCard({super.key, required this.weather, this.daily});
 
   String _number(double? value, [String unit = '']) =>
       value != null && value.isFinite
@@ -27,102 +16,9 @@ class WeatherDetailsCard extends StatelessWidget {
   String _text(String? value) =>
       value == null || value.isEmpty ? '暂无数据' : value;
 
-  ({String label, String value}) _nextMoonEvent() {
-    final today = daily;
-    if (today == null) return (label: '月落', value: '暂无数据');
-    final now = DateTime.now();
-    final moonset = _timeOnDate(today.date, today.moonset);
-    if (moonset == null || now.isBefore(moonset)) {
-      return (label: '月落', value: _text(today.moonset));
-    }
-    final next =
-        dailyForecast
-            .where((day) => day.date.isAfter(today.date))
-            .where((day) => day.moonrise?.isNotEmpty == true)
-            .firstOrNull;
-    return (
-      label: '下次月出',
-      value:
-          next == null
-              ? '暂无数据'
-              : '${next.date.month}月${next.date.day}日 ${next.moonrise}',
-    );
-  }
-
-  DateTime? _timeOnDate(DateTime date, String? clock) {
-    if (clock == null) return null;
-    final parts = clock.split(':');
-    if (parts.length < 2) return null;
-    final hour = int.tryParse(parts[0]), minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return null;
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
-  double? _moonIllumination() {
-    final current = daily?.moonPhaseAt(DateTime.now());
-    if (current != null) return current.illumination;
-    final date = daily?.date;
-    if (date == null) return null;
-    final age = _lunarAge(date);
-    return (50 * (1 - math.cos(2 * math.pi * age / 29.53058867)))
-        .roundToDouble();
-  }
-
-  double get _moonPhaseProgress {
-    final current = daily?.moonPhaseAt(DateTime.now());
-    if (current != null) return current.value;
-    final date = daily?.date ?? DateTime.now();
-    return _lunarAge(date) / 29.53058867;
-  }
-
-  String get _moonPhaseName {
-    final current = daily?.moonPhaseAt(DateTime.now());
-    return current?.name.isNotEmpty == true
-        ? current!.name
-        : _text(daily?.moonPhase);
-  }
-
-  String _nextFullMoon() {
-    final forecastFullMoon =
-        dailyForecast
-            .where((day) {
-              final now = DateTime.now();
-              final today = DateTime(now.year, now.month, now.day);
-              return !day.date.isBefore(today);
-            })
-            .where((day) => day.details?.astro['moonPhase'] == 'full-moon')
-            .firstOrNull;
-    final date =
-        forecastFullMoon?.date ?? _calculatedNextFullMoon(DateTime.now());
-    return '${date.month}月${date.day}日';
-  }
-
-  double _lunarAge(DateTime date) {
-    final reference = DateTime.utc(2000, 1, 6, 18, 14);
-    final sample = DateTime.utc(date.year, date.month, date.day, 12);
-    final days = sample.difference(reference).inMinutes / 1440;
-    return ((days % 29.53058867) + 29.53058867) % 29.53058867;
-  }
-
-  DateTime _calculatedNextFullMoon(DateTime now) {
-    final reference = DateTime.utc(2000, 1, 6, 18, 14);
-    const cycle = 29.53058867;
-    final days = now.toUtc().difference(reference).inMinutes / 1440;
-    final cycleNumber = ((days / cycle) - .5).ceil();
-    return reference
-        .add(Duration(minutes: ((cycleNumber + .5) * cycle * 1440).round()))
-        .toLocal();
-  }
-
   @override
   Widget build(BuildContext context) {
     final difference = weather.feelsLike - weather.temp;
-    final moonEvent = _nextMoonEvent();
-    final orientation = approximateMoonOrientation(
-      time: DateTime.now(),
-      latitude: latitude ?? 0,
-      longitude: longitude ?? 0,
-    );
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns =
@@ -248,26 +144,6 @@ class WeatherDetailsCard extends StatelessWidget {
                 '湿度',
                 _number(weather.humidity, '%'),
                 note: '露点 ${_number(weather.dew, '°')}',
-              ),
-            ),
-            const SizedBox(height: 12),
-            _wide(
-              context,
-              Icons.nightlight_round,
-              _moonPhaseName,
-              [
-                _row('照射范围', _number(_moonIllumination(), '%')),
-                _row(moonEvent.label, moonEvent.value),
-                _row('下次满月', _nextFullMoon()),
-              ],
-              graphic: SizedBox.square(
-                dimension: 128,
-                child: MoonPhaseSphere(
-                  phase: _moonPhaseProgress,
-                  librationLongitude: orientation.longitude,
-                  librationLatitude: orientation.latitude,
-                  orientation: orientation.rotation,
-                ),
               ),
             ),
             const SizedBox(height: 12),

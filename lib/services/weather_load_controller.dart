@@ -65,7 +65,7 @@ class WeatherLoadController extends ChangeNotifier {
                 }),
               )
               .toList();
-      return await _withMoonAstronomy(city, days);
+      return days;
     } catch (_) {
       // Keep forecasts available for accounts without access to the v1 product.
     }
@@ -84,32 +84,7 @@ class WeatherLoadController extends ChangeNotifier {
         (response['daily'] as List)
             .map((day) => DailyWeatherModel.fromJson(day))
             .toList();
-    return await _withMoonAstronomy(city, days);
-  }
-
-  Future<List<DailyWeatherModel>> _withMoonAstronomy(
-    CityModel city,
-    List<DailyWeatherModel> days,
-  ) async {
-    if (days.isEmpty) return days;
-    try {
-      final moon = await service.getMoonAstronomy(
-        lat: city.lat!,
-        lon: city.lon!,
-        date: days.first.date,
-      );
-      final phases =
-          moon['moonPhase'] is List ? moon['moonPhase'] as List : const [];
-      final firstJson =
-          days.first.toJson()
-            ..['_moonrise'] = moon['moonrise']
-            ..['_moonset'] = moon['moonset']
-            ..['_moonPhaseHourly'] = phases;
-      return [DailyWeatherModel.fromJson(firstJson), ...days.skip(1)];
-    } catch (_) {
-      // Astronomy is an enhancement; daily weather remains usable without it.
-      return days;
-    }
+    return days;
   }
 
   Future<dynamic> _fetch(CityModel city, WeatherModule module) async {

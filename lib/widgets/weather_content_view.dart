@@ -118,9 +118,6 @@ class WeatherContentView extends StatelessWidget {
           content = WeatherDetailsCard(
             weather: data.weather!,
             daily: data.dailyForecast?.firstOrNull,
-            dailyForecast: data.dailyForecast ?? const [],
-            latitude: data.city.lat,
-            longitude: data.city.lon,
           );
         }
       case WeatherModule.daily:
