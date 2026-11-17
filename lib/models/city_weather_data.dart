@@ -29,6 +29,42 @@ class CityWeatherData {
   List<WeatherWarningModel>? get warnings => warningState.data;
   AirQualityModel? get airQuality => air.data;
 
+  DateTime get detailStartDate {
+    final today = WeatherTimeUtils.date(
+      WeatherTimeUtils.atOffset(DateTime.now(), utcOffset),
+    );
+    return today;
+  }
+
+  List<DailyWeatherModel> get detailDays {
+    final start = detailStartDate;
+    final end = start.add(const Duration(days: 10));
+    return (dailyForecast ?? <DailyWeatherModel>[])
+        .where((day) => !day.date.isBefore(start) && day.date.isBefore(end))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  List<HourlyWeatherModel> get detailHours {
+    final start = detailStartDate;
+    final end = start.add(const Duration(days: 10));
+    final offset = utcOffset ?? Duration.zero;
+    final now = DateTime.now().toUtc();
+    return (hourlyForecast ?? <HourlyWeatherModel>[])
+        .where(
+          (hour) =>
+              !hour.time.isBefore(start) &&
+              !hour.time.subtract(hour.utcOffset ?? offset).isBefore(now) &&
+              hour.time.isBefore(end),
+        )
+        .toList()
+      ..sort(
+        (a, b) => a.time
+            .subtract(a.utcOffset ?? offset)
+            .compareTo(b.time.subtract(b.utcOffset ?? offset)),
+      );
+  }
+
   Duration? get utcOffset {
     final observationOffset = WeatherTimeUtils.offsetOf(weather?.obsTime);
     if (observationOffset != null) return observationOffset;

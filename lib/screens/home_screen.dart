@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   itemBuilder: (context, index) {
                     final city = _cities[index];
                     final data = _weather.data(city);
-                    final daily = data.dailyForecast;
+                    final daily = data.detailDays;
                     return WeatherRefreshIndicator(
                       onRefresh: () => _weather.refresh(city),
                       child: CustomScrollView(
@@ -242,10 +242,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         slivers: [
                           WeatherAppBar(
                             weather: data.weather,
-                            dailyForecast:
-                                daily == null || daily.isEmpty
-                                    ? null
-                                    : daily.first,
+                            dailyForecast: daily.isEmpty ? null : daily.first,
                             cityName: city.name,
                             currentCityIndex: index,
                             totalCities: _cities.length,
@@ -257,7 +254,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               hasScrollBody: false,
                               child:
                                   data.isLoading
-                                      ? const Center(child: WeatherLoadingDots())
+                                      ? const Center(
+                                        child: WeatherLoadingDots(),
+                                      )
                                       : WeatherLoadingFailedView(
                                         onRetry: () => _weather.refresh(city),
                                       ),
@@ -265,6 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           else
                             WeatherContentView(
                               data: data,
+                              updates: _weather,
                               onMap: _openMap,
                               onRetry: (module) => _weather.retry(city, module),
                             ),

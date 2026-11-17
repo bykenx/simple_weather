@@ -177,16 +177,18 @@ class WeatherDetailsCard extends StatelessWidget {
     final average = daily?.details?.averageTemperature;
     final difference =
         average != null && average.isFinite && weather.temp.isFinite
-            ? weather.temp - average
+            ? (weather.temp - average).round()
             : null;
     final differenceText =
         difference == null
             ? '暂无数据'
-            : '${difference >= 0 ? '+' : '−'}${difference.abs().round()}°';
+            : difference == 0
+            ? '0°'
+            : '${difference > 0 ? '+' : '−'}${difference.abs()}°';
     final comparison =
         difference == null
             ? '暂无可比较数据'
-            : difference.abs() < 0.5
+            : difference == 0
             ? '接近今日预报平均温度'
             : '${difference > 0 ? '高于' : '低于'}今日预报平均温度';
 

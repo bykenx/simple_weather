@@ -15,10 +15,15 @@ class HttpService {
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
     bool handleErrorResponse = false,
   }) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: headers == null ? null : Options(headers: headers),
+      );
       return response;
     } on DioException catch (e) {
       if (handleErrorResponse && e.response != null) {

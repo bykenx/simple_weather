@@ -2,6 +2,7 @@ import '../utils/url.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/city_weather_data.dart';
+import '../models/weather_model.dart';
 import '../models/weather_module.dart';
 import '../utils/weather_time.dart';
 import 'air_quality_card.dart';
@@ -16,11 +17,13 @@ class WeatherContentView extends StatelessWidget {
   final CityWeatherData data;
   final VoidCallback onMap;
   final Future<void> Function(WeatherModule) onRetry;
+  final Listenable? updates;
   const WeatherContentView({
     super.key,
     required this.data,
     required this.onMap,
     required this.onRetry,
+    this.updates,
   });
   @override
   Widget build(BuildContext context) {
@@ -93,16 +96,26 @@ class WeatherContentView extends StatelessWidget {
   }
 
   void _openForecast(BuildContext context, DateTime date) {
+    Widget detail() => ForecastDetailSheet(
+      days: data.detailDays,
+      hours: data.detailHours,
+      startDate: data.detailStartDate,
+      initialDate: date,
+      cityName: data.city.name,
+      utcOffset: data.utcOffset,
+      weather: data.weather,
+    );
     showWeatherDetailSheet(
       context,
       title: '天气状况',
       icon: Icons.cloud_outlined,
-      child: ForecastDetailSheet(
-        days: data.dailyForecast ?? [],
-        hours: data.hourlyForecast ?? [],
-        initialDate: date,
-        cityName: data.city.name,
-      ),
+      child:
+          updates == null
+              ? detail()
+              : ListenableBuilder(
+                listenable: updates!,
+                builder: (context, _) => detail(),
+              ),
     );
   }
 
@@ -118,34 +131,32 @@ class WeatherContentView extends StatelessWidget {
         if (data.weather != null) {
           content = WeatherDetailsCard(
             weather: data.weather!,
-            daily: data.dailyForecast?.firstOrNull,
+            daily: data.detailDays.firstOrNull,
           );
         }
       case WeatherModule.daily:
-        if (data.dailyForecast?.isNotEmpty == true) {
+        final days = data.detailDays;
+        if (days.isNotEmpty) {
           content = DailyForecastCard(
-            dailyForecast: data.dailyForecast!,
+            dailyForecast: days,
             currentCity: data.city,
             now: WeatherTimeUtils.atOffset(DateTime.now(), data.utcOffset),
             onDayTap: (date) => _openForecast(context, date),
           );
         }
       case WeatherModule.hourly:
-        final hours = data.hourlyForecast;
-        if (hours?.isNotEmpty == true) {
+        final upcoming = data.detailHours;
+        if (upcoming.isNotEmpty) {
           content = HourlyForecastCard(
-            hourlyForecast: hours!,
-            onTap: () => _openForecast(context, hours.first.time),
+            hourlyForecast: upcoming,
+            onTap: () => _openForecast(context, upcoming.first.time),
           );
         }
       case WeatherModule.warnings:
-        final active =
-            data.warnings
-                ?.where((w) => w.endTime.isAfter(DateTime.now()))
-                .toList();
-        if (active?.isNotEmpty == true) {
+        final active = activeWeatherWarnings(data.warnings ?? []);
+        if (active.isNotEmpty) {
           content = WeatherWarningCard(
-            warnings: active!,
+            warnings: active,
             utcOffset: data.utcOffset,
           );
         }

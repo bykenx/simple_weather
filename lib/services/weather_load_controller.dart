@@ -1,4 +1,3 @@
-import '../models/forecast_days.dart';
 import 'package:flutter/foundation.dart';
 import '../models/city_weather_data.dart';
 import '../models/city_model.dart';
@@ -50,41 +49,19 @@ class WeatherLoadController extends ChangeNotifier {
   }
 
   Future<List<DailyWeatherModel>> _daily(CityModel city) async {
-    try {
-      final response = await service.getDailyWeather(
-        lat: city.lat!,
-        lon: city.lon!,
-      );
-      final sources = response['metadata']?['attributions'] ?? [];
-      final days =
-          (response['days'] as List)
-              .map(
-                (day) => DailyWeatherModel.fromJson({
-                  ...Map<String, dynamic>.from(day),
-                  '_attributions': sources,
-                }),
-              )
-              .toList();
-      return days;
-    } catch (_) {
-      // Keep forecasts available for accounts without access to the v1 product.
-    }
-    Map<String, dynamic> response;
-    try {
-      response = await service.getWeatherForecast(
-        lat: city.lat,
-        lon: city.lon,
-        forecastDays: ForecastDays.ten,
-      );
-    } catch (_) {
-      // Some accounts only have the shorter forecast; retain useful live data.
-      response = await service.getWeatherForecast(lat: city.lat, lon: city.lon);
-    }
-    final days =
-        (response['daily'] as List)
-            .map((day) => DailyWeatherModel.fromJson(day))
-            .toList();
-    return days;
+    final response = await service.getDailyWeather(
+      lat: city.lat!,
+      lon: city.lon!,
+    );
+    final sources = response['metadata']?['attributions'] ?? [];
+    return (response['days'] as List)
+        .map(
+          (day) => DailyWeatherModel.fromJson({
+            ...Map<String, dynamic>.from(day),
+            '_attributions': sources,
+          }),
+        )
+        .toList();
   }
 
   Future<dynamic> _fetch(CityModel city, WeatherModule module) async {
@@ -92,7 +69,7 @@ class WeatherLoadController extends ChangeNotifier {
     if (city.lat == null || city.lon == null) throw '城市缺少坐标，请重新添加';
     return switch (module) {
       WeatherModule.live => LiveWeatherModel.fromJson(
-        (await service.getLiveWeather(lat: city.lat, lon: city.lon))['now'],
+        await service.getLiveWeather(lat: city.lat!, lon: city.lon!),
       ),
       WeatherModule.daily => await _daily(city),
       WeatherModule.hourly => await _hourly(city),
@@ -109,12 +86,13 @@ class WeatherLoadController extends ChangeNotifier {
 
   Future<List<HourlyWeatherModel>> _hourly(CityModel city) async {
     final response = await service.getHourlyWeather(
-      lat: city.lat,
-      lon: city.lon,
+      lat: city.lat!,
+      lon: city.lon!,
     );
+    final rawHours = response['hours'] as List;
     final sources = response['metadata']?['attributions'] ?? const [];
     final hours =
-        (response['hours'] as List)
+        rawHours
             .map(
               (hour) => HourlyWeatherModel.fromJson({
                 ...Map<String, dynamic>.from(hour),
@@ -122,9 +100,6 @@ class WeatherLoadController extends ChangeNotifier {
               }),
             )
             .toList();
-    if (!hasTenDayHourlyCoverage(hours)) {
-      throw '逐小时预报数据不完整，请稍后重试';
-    }
     return hours;
   }
 
@@ -135,8 +110,15 @@ class WeatherLoadController extends ChangeNotifier {
     state.error = null;
     _emit();
     try {
-      final result = await _fetch(city, module);
+      var result = await _fetch(city, module);
       if (_disposed) return;
+      if (module == WeatherModule.hourly) {
+        final hours = List<HourlyWeatherModel>.from(result as List);
+        if (!hasTenDayHourlyCoverage(hours)) {
+          throw '逐小时预报数据不完整，请稍后重试';
+        }
+        result = hours;
+      }
       state.data = result;
       state.updatedAt = DateTime.now();
       state.fromCache = false;

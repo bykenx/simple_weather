@@ -113,6 +113,7 @@ class LiveWeatherModel {
   final double vis;
   final double cloud;
   final double dew;
+  final List<String> attributions;
 
   LiveWeatherModel({
     required this.obsTime,
@@ -130,25 +131,66 @@ class LiveWeatherModel {
     required this.vis,
     required this.cloud,
     required this.dew,
+    this.attributions = const [],
   });
 
   factory LiveWeatherModel.fromJson(Map<String, dynamic> json) {
+    final attributions = _weatherAttributions(json);
+    if (json['temperature'] is Map || json['condition'] is Map) {
+      final condition = DailyForecastDetails.object(json['condition']);
+      final wind = DailyForecastDetails.object(json['wind']);
+      final direction = DailyForecastDetails.object(wind['direction']);
+      final precipitation = DailyForecastDetails.object(json['precipitation']);
+      return LiveWeatherModel(
+        // The v1 current product does not return an observation timestamp.
+        obsTime: '',
+        temp:
+            DailyForecastDetails.measurement(json['temperature'], '°C') ??
+            double.nan,
+        feelsLike:
+            DailyForecastDetails.measurement(json['feelsLike'], '°C') ??
+            double.nan,
+        icon: condition['code']?.toString() ?? '',
+        text: condition['text']?.toString() ?? '',
+        wind360: direction['degree']?.toString() ?? '',
+        windDir: _windDirection(direction['compass']?.toString()),
+        windScale:
+            wind['scale']?.toString().replaceFirst(RegExp(r'\.0$'), '') ?? '',
+        windSpeed:
+            DailyForecastDetails.measurement(wind['speed'], 'km/h') ??
+            double.nan,
+        humidity: DailyForecastDetails.fraction(json['humidity']) ?? double.nan,
+        precip:
+            DailyForecastDetails.measurement(precipitation['amount'], 'mm') ??
+            double.nan,
+        pressure:
+            DailyForecastDetails.measurement(json['pressure'], 'hPa') ??
+            double.nan,
+        vis: _visibilityInKilometers(json['visibility']) ?? double.nan,
+        cloud: DailyForecastDetails.fraction(json['cloudCover']) ?? double.nan,
+        dew:
+            DailyForecastDetails.measurement(json['dewPoint'], '°C') ??
+            double.nan,
+        attributions: attributions,
+      );
+    }
     return LiveWeatherModel(
-      obsTime: json['obsTime'],
-      temp: double.tryParse(json['temp']) ?? double.nan,
-      feelsLike: double.tryParse(json['feelsLike']) ?? double.nan,
-      icon: json['icon'],
-      text: json['text'],
-      wind360: json['wind360'],
-      windDir: json['windDir'],
-      windScale: json['windScale'],
-      windSpeed: double.tryParse(json['windSpeed']) ?? double.nan,
-      humidity: double.tryParse(json['humidity']) ?? double.nan,
-      precip: double.tryParse(json['precip']) ?? double.nan,
-      pressure: double.tryParse(json['pressure']) ?? double.nan,
-      vis: double.tryParse(json['vis']) ?? double.nan,
-      cloud: double.tryParse(json['cloud']) ?? double.nan,
-      dew: double.tryParse(json['dew']) ?? double.nan,
+      obsTime: json['obsTime']?.toString() ?? '',
+      temp: DailyForecastDetails.number(json['temp']) ?? double.nan,
+      feelsLike: DailyForecastDetails.number(json['feelsLike']) ?? double.nan,
+      icon: json['icon']?.toString() ?? '',
+      text: json['text']?.toString() ?? '',
+      wind360: json['wind360']?.toString() ?? '',
+      windDir: json['windDir']?.toString() ?? '',
+      windScale: json['windScale']?.toString() ?? '',
+      windSpeed: DailyForecastDetails.number(json['windSpeed']) ?? double.nan,
+      humidity: DailyForecastDetails.number(json['humidity']) ?? double.nan,
+      precip: DailyForecastDetails.number(json['precip']) ?? double.nan,
+      pressure: DailyForecastDetails.number(json['pressure']) ?? double.nan,
+      vis: DailyForecastDetails.number(json['vis']) ?? double.nan,
+      cloud: DailyForecastDetails.number(json['cloud']) ?? double.nan,
+      dew: DailyForecastDetails.number(json['dew']) ?? double.nan,
+      attributions: attributions,
     );
   }
 
@@ -169,8 +211,15 @@ class LiveWeatherModel {
       'vis': vis.toString(),
       'cloud': cloud.toString(),
       'dew': dew.toString(),
+      '_attributions': attributions,
     };
   }
+}
+
+List<String> _weatherAttributions(Map<String, dynamic> json) {
+  final metadata = DailyForecastDetails.object(json['metadata']);
+  final value = metadata['attributions'] ?? json['_attributions'];
+  return value is List ? value.whereType<String>().toList() : const [];
 }
 
 class HourlyWeatherModel {
@@ -350,9 +399,6 @@ class HourlyWeatherModel {
   }
 }
 
-/// The 240-hour product can contain 216–240 usable forecast points depending
-/// on the provider's issue time. Older v7 caches contain only 24 points and no
-/// hourly apparent temperature, so they must be refreshed after this upgrade.
 bool hasTenDayHourlyCoverage(List<HourlyWeatherModel> hours) =>
     hours.length >= 216 &&
     hours.every((hour) => hour.feelsLike?.isFinite == true);
@@ -421,6 +467,13 @@ class WeatherWarningModel {
   final String type;
   final String typeName;
   final String text;
+  final String icon;
+  final Map<String, dynamic> alertColor;
+  final String instruction;
+  final String criteria;
+  final List<String> supersedes;
+  final List<String> attributions;
+  final DateTime? onsetTime;
 
   WeatherWarningModel({
     required this.id,
@@ -437,9 +490,48 @@ class WeatherWarningModel {
     required this.type,
     required this.typeName,
     required this.text,
+    this.icon = '',
+    this.alertColor = const {},
+    this.instruction = '',
+    this.criteria = '',
+    this.supersedes = const [],
+    this.attributions = const [],
+    this.onsetTime,
   });
 
   factory WeatherWarningModel.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('issuedTime') || json['eventType'] is Map) {
+      final event = DailyForecastDetails.object(json['eventType']);
+      final message = DailyForecastDetails.object(json['messageType']);
+      final color = DailyForecastDetails.object(json['color']);
+      final id = json['id']?.toString() ?? '';
+      if (id.isEmpty) throw const FormatException('预警缺少编号');
+      final issuedTime = json['issuedTime']?.toString() ?? '';
+      return WeatherWarningModel(
+        id: id,
+        sender: json['senderName']?.toString() ?? '',
+        pubTime: DateTime.parse(issuedTime),
+        utcOffset: WeatherTimeUtils.offsetOf(issuedTime),
+        title: json['headline']?.toString() ?? '',
+        startTime: DateTime.parse(json['effectiveTime']?.toString() ?? ''),
+        endTime: DateTime.parse(json['expireTime']?.toString() ?? ''),
+        onsetTime: DateTime.tryParse(json['onsetTime']?.toString() ?? ''),
+        status: message['code']?.toString() ?? 'alert',
+        level: '',
+        severity: json['severity']?.toString() ?? 'unknown',
+        severityColor: color['code']?.toString() ?? '',
+        type: event['code']?.toString() ?? '',
+        typeName: event['name']?.toString() ?? '气象预警',
+        text: json['description']?.toString() ?? '',
+        icon: json['icon']?.toString() ?? '',
+        alertColor: color,
+        instruction: json['instruction']?.toString() ?? '',
+        criteria: json['criteria']?.toString() ?? '',
+        supersedes:
+            (message['supersedes'] as List? ?? []).whereType<String>().toList(),
+        attributions: _weatherAttributions(json),
+      );
+    }
     return WeatherWarningModel(
       id: json['id'],
       sender: json['sender'],
@@ -460,6 +552,14 @@ class WeatherWarningModel {
       type: json['type'],
       typeName: json['typeName'],
       text: json['text'],
+      icon: json['_icon']?.toString() ?? '',
+      alertColor: DailyForecastDetails.object(json['_alertColor']),
+      instruction: json['_instruction']?.toString() ?? '',
+      criteria: json['_criteria']?.toString() ?? '',
+      supersedes:
+          (json['_supersedes'] as List? ?? []).whereType<String>().toList(),
+      attributions: _weatherAttributions(json),
+      onsetTime: DateTime.tryParse(json['_onsetTime']?.toString() ?? ''),
     );
   }
 
@@ -479,6 +579,43 @@ class WeatherWarningModel {
       'type': type,
       'typeName': typeName,
       'text': text,
+      '_icon': icon,
+      '_alertColor': alertColor,
+      '_instruction': instruction,
+      '_criteria': criteria,
+      '_supersedes': supersedes,
+      '_attributions': attributions,
+      '_onsetTime': onsetTime?.toIso8601String(),
     };
   }
+}
+
+/// A successful feed is a replacement snapshot. Retain message relationships
+/// in cache so an updated or cancelled warning cannot reappear while offline.
+List<WeatherWarningModel> activeWeatherWarnings(
+  Iterable<WeatherWarningModel> warnings, {
+  DateTime? now,
+}) {
+  final messages = <String, WeatherWarningModel>{};
+  for (final warning in warnings) {
+    final previous = messages[warning.id];
+    if (previous == null || !warning.pubTime.isBefore(previous.pubTime)) {
+      messages[warning.id] = warning;
+    }
+  }
+  final superseded = <String>{
+    for (final message in messages.values)
+      if (const {'update', 'cancel'}.contains(message.status.toLowerCase()))
+        ...message.supersedes,
+  };
+  final current = now ?? DateTime.now();
+  return messages.values
+      .where(
+        (warning) =>
+            warning.status.toLowerCase() != 'cancel' &&
+            warning.status.toLowerCase() != 'cancelled' &&
+            !superseded.contains(warning.id) &&
+            warning.endTime.isAfter(current),
+      )
+      .toList();
 }

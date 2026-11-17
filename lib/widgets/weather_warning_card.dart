@@ -1,4 +1,5 @@
 import '../utils/warning_colors.dart';
+import '../utils/weather_icon.dart';
 import 'weather_card_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:simple_weather/models/weather_model.dart';
@@ -120,8 +121,10 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
 
   Widget _warningContent(WeatherWarningModel warning) {
     final colorScheme = Theme.of(context).colorScheme;
-    final severity = warning.severityColor.toLowerCase();
-    final accent = WarningColorsUtils.background(severity);
+    final accent = WarningColorsUtils.background(
+      warning.severityColor,
+      rgba: warning.alertColor,
+    );
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -130,7 +133,14 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, size: 20, color: accent),
+              Icon(
+                WeatherIconUtils.getWeatherIcon(
+                  warning.icon.isNotEmpty ? warning.icon : warning.type,
+                  filled: true,
+                ),
+                size: 20,
+                color: accent,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
