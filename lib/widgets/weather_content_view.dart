@@ -1,4 +1,4 @@
-import '../utils/url_utils.dart';
+import '../utils/url.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/city_weather_data.dart';

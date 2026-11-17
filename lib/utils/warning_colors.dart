@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class WarningColors {
+class WarningColorsUtils {
   static Color background(String severity) => switch (severity.toLowerCase()) {
     'red' => const Color(0xFFED2246),
     'yellow' => const Color(0xFFFFD700),

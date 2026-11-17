@@ -119,7 +119,7 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
   Widget _warningContent(WeatherWarningModel warning) {
     final colorScheme = Theme.of(context).colorScheme;
     final severity = warning.severityColor.toLowerCase();
-    final accent = WarningColors.background(severity);
+    final accent = WarningColorsUtils.background(severity);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(

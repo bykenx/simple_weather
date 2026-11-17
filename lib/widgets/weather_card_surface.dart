@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 /// Shared glass surface. The filter is clipped before painting sharp content.
 class WeatherCardSurface extends StatelessWidget {
-  static const borderRadius = AppTheme.cardRadius;
+  static const borderRadius = AppThemeUtils.cardRadius;
 
   final Widget child;
 

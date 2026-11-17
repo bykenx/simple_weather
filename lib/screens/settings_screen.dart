@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:simple_weather/services/settings_service.dart';
-import 'package:simple_weather/utils/url_utils.dart';
+import 'package:simple_weather/utils/url.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

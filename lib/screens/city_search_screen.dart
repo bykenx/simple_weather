@@ -4,7 +4,7 @@ import 'package:simple_weather/models/city_model.dart';
 import 'package:simple_weather/services/weather_service.dart';
 import 'package:simple_weather/services/city_service.dart';
 import 'package:simple_weather/services/weather_cache_service.dart';
-import 'package:simple_weather/utils/debounce_utils.dart';
+import 'package:simple_weather/utils/debounce.dart';
 import 'package:flutter/foundation.dart';
 
 class CitySearchScreen extends StatefulWidget {
@@ -239,7 +239,7 @@ class _CitySearchScreenState extends State<CitySearchScreen> {
                                         horizontal: 8,
                                         vertical: 12,
                                       ),
-                                      decoration: AppTheme.cardDecoration(
+                                      decoration: AppThemeUtils.cardDecoration(
                                         context,
                                       ),
                                       child: Column(

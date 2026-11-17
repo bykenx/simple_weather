@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/weather_model.dart';
 import '../utils/warning_colors.dart';
-import '../utils/weather_icon_utils.dart';
+import '../utils/weather_icon.dart';
 import 'weather_detail_sheet.dart';
 
 Future<void> showWeatherWarningSheet(
@@ -26,8 +26,8 @@ class WeatherWarningSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final background = WarningColors.background(warning.severityColor);
-    final foreground = WarningColors.foreground(warning.severityColor);
+    final background = WarningColorsUtils.background(warning.severityColor);
+    final foreground = WarningColorsUtils.foreground(warning.severityColor);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

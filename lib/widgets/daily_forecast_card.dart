@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
 import '../models/city_model.dart';
 
-import '../utils/date_utils.dart';
-import '../utils/weather_icon_utils.dart';
+import '../utils/date.dart';
+import '../utils/weather_icon.dart';
 import 'weather_card_surface.dart';
 
 class DailyForecastCard extends StatelessWidget {

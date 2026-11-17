@@ -1,5 +1,5 @@
 import '../widgets/weather_bottom_bar.dart';
-import '../utils/url_utils.dart';
+import '../utils/url.dart';
 import '../widgets/weather_refresh_indicator.dart';
 import '../widgets/weather_scene.dart';
 import 'package:flutter/material.dart';

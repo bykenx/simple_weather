@@ -7,7 +7,7 @@ Future<void> showWeatherDetailSheet(
   required IconData icon,
   required Widget child,
 }) {
-  final theme = AppTheme.build(Theme.of(context).brightness);
+  final theme = AppThemeUtils.build(Theme.of(context).brightness);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/air_quality_model.dart';
-import '../utils/air_quality_utils.dart';
+import '../utils/air_quality.dart';
 import 'weather_detail_sheet.dart';
 
 class AirQualitySheet extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
-import '../utils/weather_icon_utils.dart';
+import '../utils/weather_icon.dart';
 import 'weather_detail_sheet.dart';
 
 DateTime forecastDate(DateTime value) =>

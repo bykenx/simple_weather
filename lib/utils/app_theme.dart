@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppTheme {
+class AppThemeUtils {
   static const cardRadius = BorderRadius.all(Radius.circular(20));
 
   static ThemeData build(Brightness brightness) {

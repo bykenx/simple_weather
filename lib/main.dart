@@ -21,8 +21,8 @@ class MyApp extends StatelessWidget {
       builder: (context, darkModeEnabled, _) {
         return MaterialApp(
           title: '简单天气',
-          theme: AppTheme.build(Brightness.light),
-          darkTheme: AppTheme.build(Brightness.dark),
+          theme: AppThemeUtils.build(Brightness.light),
+          darkTheme: AppThemeUtils.build(Brightness.dark),
           themeMode: darkModeEnabled ? ThemeMode.dark : ThemeMode.light,
           initialRoute:
               kDebugMode && const bool.fromEnvironment('WEATHER_PREVIEW')
