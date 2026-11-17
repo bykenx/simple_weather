@@ -56,7 +56,6 @@ class WeatherAppBar extends StatelessWidget {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // Only shade the pinned toolbar, fading out before its lower edge.
               Positioned(
                 top: 0,
                 left: 0,

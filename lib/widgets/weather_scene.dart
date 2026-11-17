@@ -28,18 +28,30 @@ class WeatherScene {
     LiveWeatherModel? weather, {
     DateTime? now,
     Duration? utcOffset,
+    DailyWeatherModel? daily,
   }) {
     final code = int.tryParse(weather?.icon ?? '') ?? 999;
-    // Night-specific provider icons take priority; other codes use the city's
-    // observation offset, rather than the phone's local timezone.
+    // Astronomy for this city/date takes priority over potentially cached
+    // condition icons. Keep the provider/night-hour fallback if it is absent.
     final local = WeatherTimeUtils.atOffset(
       now ?? DateTime.now(),
       WeatherTimeUtils.offsetOf(weather?.obsTime) ?? utcOffset,
     );
+    final sunrise = _clockMinutes(daily?.sunrise);
+    final sunset = _clockMinutes(daily?.sunset);
+    final hasSunTimes =
+        daily != null &&
+        WeatherTimeUtils.date(daily.date) == WeatherTimeUtils.date(local) &&
+        sunrise != null &&
+        sunset != null &&
+        sunrise < sunset;
+    final minute = local.hour * 60 + local.minute;
     final night =
-        {150, 151, 152, 153, 350, 351, 456, 457}.contains(code) ||
-        local.hour < 6 ||
-        local.hour >= 18;
+        hasSunTimes
+            ? minute < sunrise || minute >= sunset
+            : {150, 151, 152, 153, 350, 351, 456, 457}.contains(code) ||
+                local.hour < 6 ||
+                local.hour >= 18;
     final kind = switch (code) {
       100 || 150 || 900 => SkyKind.clear,
       101 || 102 || 103 || 151 || 152 || 153 => SkyKind.clouds,
@@ -55,6 +67,16 @@ class WeatherScene {
     };
     return WeatherScene(kind, night);
   }
+
+  static int? _clockMinutes(String? value) {
+    final match = RegExp(
+      r'^(\d{2}):(\d{2})(?::\d{2})?$',
+    ).firstMatch(value ?? '');
+    if (match == null) return null;
+    final hour = int.parse(match[1]!), minute = int.parse(match[2]!);
+    return hour < 24 && minute < 60 ? hour * 60 + minute : null;
+  }
+
   List<Color> get colors {
     if (night) {
       return switch (kind) {
@@ -84,7 +106,6 @@ class WeatherScene {
   int get hashCode => Object.hash(kind, night);
 }
 
-/// A canvas-only atmosphere: no network assets, hit targets, or per-frame builds.
 class WeatherSceneBackground extends StatefulWidget {
   final WeatherScene scene;
   final bool paused;

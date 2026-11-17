@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-/// The original decorative crescent used beside the current conditions.
 class WeatherCrescent extends StatefulWidget {
   const WeatherCrescent({super.key});
 

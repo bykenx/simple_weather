@@ -16,16 +16,19 @@ class HttpService {
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    CancelToken? cancelToken,
     bool handleErrorResponse = false,
   }) async {
     try {
       final response = await _dio.get(
         path,
         queryParameters: queryParameters,
+        cancelToken: cancelToken,
         options: headers == null ? null : Options(headers: headers),
       );
       return response;
     } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) rethrow;
       if (handleErrorResponse && e.response != null) {
         return e.response!;
       }

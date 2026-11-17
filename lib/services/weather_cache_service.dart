@@ -10,13 +10,9 @@ import 'package:simple_weather/models/weather_model.dart';
 
 class WeatherCacheService {
   static const String _weatherCacheKey = 'weather_cache';
-  static const String _hotCitiesCacheKey = 'hot_cities_cache'; // 热门城市缓存键
-  static final WeatherCacheService _instance = WeatherCacheService._internal();
+  static const String _hotCitiesCacheKey = 'hot_cities_cache';
+  const WeatherCacheService();
 
-  factory WeatherCacheService() => _instance;
-  WeatherCacheService._internal();
-
-  // 保存城市天气数据到缓存
   Future<void> saveWeatherData(
     String cityKey,
     CityWeatherData weatherData,
@@ -38,14 +34,17 @@ class WeatherCacheService {
       }
       await prefs.setString(
         '${_weatherCacheKey}_$cityKey',
-        jsonEncode({'hourlyTimeVersion': 1, 'modules': modules}),
+        jsonEncode({
+          'hourlyTimeVersion': 1,
+          'hourlyDataVersion': 2,
+          'modules': modules,
+        }),
       );
     } catch (e) {
       if (kDebugMode) print('缓存保存错误: $e');
     }
   }
 
-  // 保存热门城市列表到缓存
   Future<void> saveHotCities(List<CityModel> cities) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -67,7 +66,6 @@ class WeatherCacheService {
     }
   }
 
-  // 从缓存加载热门城市列表
   Future<List<CityModel>?> loadHotCities() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -77,7 +75,6 @@ class WeatherCacheService {
 
       final Map<String, dynamic> cacheData = jsonDecode(cacheString);
 
-      // 检查缓存是否过期
       if (isHotCitiesCacheExpired(cacheData)) {
         if (kDebugMode) {
           print('热门城市缓存已过期');
@@ -109,7 +106,6 @@ class WeatherCacheService {
     }
   }
 
-  // 检查热门城市缓存是否过期（每24小时更新一次）
   bool isHotCitiesCacheExpired(Map<String, dynamic> cacheData) {
     if (!cacheData.containsKey('lastUpdated')) return true;
 
@@ -119,7 +115,6 @@ class WeatherCacheService {
     return DateTime.now().isAfter(lastUpdated.add(const Duration(hours: 24)));
   }
 
-  // 从缓存加载城市天气数据
   Future<CityWeatherData?> loadWeatherData(CityModel city) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -177,12 +172,12 @@ class WeatherCacheService {
                   ? DateTime.fromMillisecondsSinceEpoch(timestamp)
                   : null;
           if (m == WeatherModule.hourly &&
+              cacheData['hourlyDataVersion'] != 2 &&
               !hasTenDayHourlyCoverage(
                 state.data as List<HourlyWeatherModel>,
               )) {
-            // Preserve the old preview while forcing an immediate v1/240h
-            // refresh. This migrates existing installations without asking
-            // users to clear the application cache manually.
+            // Refresh legacy short feeds once. New partial v1 feeds retain
+            // their successful fetch time instead of refreshing every launch.
             state.updatedAt = null;
           }
           state.fromCache = true;
@@ -192,7 +187,6 @@ class WeatherCacheService {
       }
       return weatherData;
     } catch (e) {
-      // 如果解析缓存数据出错，返回null
       if (kDebugMode) {
         print('缓存加载错误: $e');
       }
@@ -200,7 +194,6 @@ class WeatherCacheService {
     }
   }
 
-  // 清除指定城市的缓存数据
   Future<void> clearCityCache(String cityKey) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -210,7 +203,6 @@ class WeatherCacheService {
     }
   }
 
-  // 清除热门城市缓存
   Future<void> clearHotCitiesCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -223,7 +215,6 @@ class WeatherCacheService {
     }
   }
 
-  // 清除所有缓存数据
   Future<void> clearAllCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();

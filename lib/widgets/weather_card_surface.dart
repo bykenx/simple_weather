@@ -30,7 +30,7 @@ class WeatherCardSurface extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: borderRadius,
-        child: BackdropFilter(
+        child: BackdropFilter.grouped(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           blendMode: BlendMode.src,
           child: DecoratedBox(

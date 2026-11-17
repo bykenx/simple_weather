@@ -5,8 +5,15 @@ class ModuleState<T> {
   bool isLoading = false;
   String? error;
   DateTime? updatedAt;
+  DateTime? retryAfter;
   bool fromCache = false;
-  bool get isExpired =>
+  bool get isExpired => isExpiredAt(DateTime.now());
+  bool isExpiredAt(DateTime now) =>
       updatedAt == null ||
-      DateTime.now().difference(updatedAt!) >= const Duration(hours: 1);
+      now.difference(updatedAt!) >= const Duration(hours: 1);
+
+  bool shouldRefreshAt(DateTime now) =>
+      !isLoading &&
+      isExpiredAt(now) &&
+      (retryAfter == null || !now.isBefore(retryAfter!));
 }

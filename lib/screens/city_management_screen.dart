@@ -111,7 +111,7 @@ class _CityManagementScreenState extends State<CityManagementScreen> {
                             AppRoutes.citySearch,
                           );
                           if (result == true) {
-                            _loadCities(); // 如果返回 true，则刷新城市列表
+                            _loadCities();
                           }
                         },
               ),

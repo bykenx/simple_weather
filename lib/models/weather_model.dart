@@ -400,8 +400,7 @@ class HourlyWeatherModel {
 }
 
 bool hasTenDayHourlyCoverage(List<HourlyWeatherModel> hours) =>
-    hours.length >= 216 &&
-    hours.every((hour) => hour.feelsLike?.isFinite == true);
+    hours.length >= 216;
 
 DateTime _parseForecastWallClock(dynamic value) {
   return WeatherTimeUtils.parseWallClock(value?.toString() ?? '');

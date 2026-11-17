@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
 import '../utils/weather_time.dart';
 import '../utils/weather_icon.dart';
+import '../utils/forecast.dart';
 import 'weather_detail_sheet.dart';
 import 'temperature_chart_tooltip.dart';
 
@@ -38,6 +39,9 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
   HourlyWeatherModel? _selectedHour;
   late final Timer _timeRefresh;
   final dateController = ScrollController();
+  late final PageController _temperaturePages;
+  late final PageController _precipitationPages;
+  bool _syncingPages = false;
   static const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
   @override
@@ -50,16 +54,147 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
     final initial = forecastDate(widget.initialDate);
     selected =
         dates.contains(initial) ? initial : (dates.firstOrNull ?? initial);
+    final initialPage = dates.indexOf(selected);
+    _temperaturePages = PageController(initialPage: initialPage);
+    _precipitationPages = PageController(initialPage: initialPage);
+    _temperaturePages.addListener(
+      () => _syncPagePosition(_temperaturePages, _precipitationPages),
+    );
+    _precipitationPages.addListener(
+      () => _syncPagePosition(_precipitationPages, _temperaturePages),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !dateController.hasClients) return;
-      dateController.jumpTo(
-        (dates.indexOf(selected) * 64.0 - 100).clamp(
-          0.0,
-          dateController.position.maxScrollExtent,
-        ),
-      );
+      _revealSelectedDate(animate: false);
     });
   }
+
+  void _revealSelectedDate({bool animate = true}) {
+    if (!mounted || !dateController.hasClients) return;
+    final position = dateController.position;
+    final target = (dates.indexOf(selected) * 64.0 +
+            32 -
+            position.viewportDimension / 2)
+        .clamp(0.0, position.maxScrollExtent);
+    if (animate && !MediaQuery.disableAnimationsOf(context)) {
+      dateController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    } else {
+      dateController.jumpTo(target);
+    }
+  }
+
+  void _selectDate(DateTime date) {
+    final page = dates.indexOf(date);
+    if (page < 0 || !_temperaturePages.hasClients) return;
+    if (_selectedHour != null) setState(() => _selectedHour = null);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _temperaturePages.jumpToPage(page);
+    } else {
+      _temperaturePages.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _pageChanged(int index) {
+    if (index < 0 || index >= dates.length || dates[index] == selected) return;
+    setState(() {
+      selected = dates[index];
+      _selectedHour = null;
+    });
+    _revealSelectedDate();
+  }
+
+  void _syncPagePosition(PageController source, PageController target) {
+    if (_syncingPages || !source.hasClients || !target.hasClients) return;
+    if (!source.position.hasViewportDimension ||
+        !target.position.hasViewportDimension ||
+        !target.position.hasContentDimensions) {
+      return;
+    }
+    final page = source.page;
+    if (page == null) return;
+    final position = target.position;
+    final offset = (page * position.viewportDimension).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((position.pixels - offset).abs() < .01) return;
+    // Mirror fractional page positions, not just the final selected date, so
+    // both charts follow the finger and the settling animation together.
+    _syncingPages = true;
+    try {
+      target.jumpTo(offset);
+      // jumpTo starts a ballistic settle; only the leading pager should
+      // settle, otherwise the follower would snap back between drag frames.
+      position.hold(() {});
+    } finally {
+      _syncingPages = false;
+    }
+  }
+
+  Widget _chartPager({
+    required Key key,
+    required PageController controller,
+    required double height,
+    required Widget Function(DateTime date) builder,
+  }) => SizedBox(
+    key: key,
+    height: height,
+    child: LayoutBuilder(
+      builder:
+          (_, constraints) => OverflowBox(
+            // Include both outer margins in the page stride while keeping each
+            // chart at its original width and horizontal position when settled.
+            minWidth: constraints.maxWidth + 2 * weatherDetailHorizontalPadding,
+            maxWidth: constraints.maxWidth + 2 * weatherDetailHorizontalPadding,
+            child: NotificationListener<ScrollStartNotification>(
+              onNotification: (notification) {
+                if (notification.dragDetails != null && _selectedHour != null) {
+                  setState(() => _selectedHour = null);
+                }
+                return false;
+              },
+              child: PageView.builder(
+                controller: controller,
+                physics: const ClampingScrollPhysics(),
+                onPageChanged: _pageChanged,
+                itemCount: dates.length,
+                itemBuilder:
+                    (_, index) => KeyedSubtree(
+                      key: ValueKey(dates[index]),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: weatherDetailHorizontalPadding,
+                        ),
+                        child: builder(dates[index]),
+                      ),
+                    ),
+              ),
+            ),
+          ),
+    ),
+  );
+
+  List<HourlyWeatherModel> _hoursForDate(DateTime date, DateTime now) =>
+      widget.hours
+          .where(
+            (hour) =>
+                forecastDate(hour.time) == date &&
+                _isUpcomingHour(hour, now, widget.utcOffset),
+          )
+          .toList()
+        ..sort(
+          (a, b) => _forecastInstant(
+            a,
+            widget.utcOffset,
+          ).compareTo(_forecastInstant(b, widget.utcOffset)),
+        );
 
   List<DateTime> _calendarDates() {
     final now = WeatherTimeUtils.atOffset(DateTime.now(), widget.utcOffset);
@@ -79,6 +214,8 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
   }
 
   void _syncSelection() {
+    final previousStart = dates.firstOrNull;
+    final previousSelected = selected;
     dates = _calendarDates();
     if (!dates.contains(selected)) {
       final initial = forecastDate(widget.initialDate);
@@ -96,11 +233,22 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
               )
               .firstOrNull;
     }
+    if (previousStart != dates.firstOrNull || previousSelected != selected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_temperaturePages.hasClients) {
+          _temperaturePages.jumpToPage(dates.indexOf(selected));
+        }
+        _revealSelectedDate();
+      });
+    }
   }
 
   @override
   void dispose() {
     _timeRefresh.cancel();
+    _temperaturePages.dispose();
+    _precipitationPages.dispose();
     dateController.dispose();
     super.dispose();
   }
@@ -110,23 +258,7 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
     final colors = Theme.of(context).colorScheme;
     final now = WeatherTimeUtils.atOffset(DateTime.now(), widget.utcOffset);
     final today = forecastDate(now);
-    final hours =
-        widget.hours
-            .where(
-              (hour) =>
-                  forecastDate(hour.time) == selected &&
-                  _isUpcomingHour(hour, now, widget.utcOffset),
-            )
-            .toList()
-          ..sort(
-            (a, b) => a.time
-                .subtract(a.utcOffset ?? widget.utcOffset ?? Duration.zero)
-                .compareTo(
-                  b.time.subtract(
-                    b.utcOffset ?? widget.utcOffset ?? Duration.zero,
-                  ),
-                ),
-          );
+    final hours = _hoursForDate(selected, now);
     final day =
         widget.days
             .where((day) => forecastDate(day.date) == selected)
@@ -171,13 +303,29 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
         hours
             .map((h) => h.pop)
             .whereType<double>()
-            .where((v) => v.isFinite)
+            .where(validPrecipitationProbability)
             .toList();
     final probability =
         probabilities.isEmpty ? null : probabilities.reduce(math.max);
-    final precipitation = day?.precip ?? _sum(hours.map((h) => h.precip));
-    final probabilityDay =
-        selected == today ? '今日' : '周${weekdays[selected.weekday - 1]}';
+    final dailyPrecipitation = day?.precip;
+    final hasDailyPrecipitation =
+        dailyPrecipitation != null &&
+        dailyPrecipitation.isFinite &&
+        dailyPrecipitation >= 0;
+    final precipitation =
+        hasDailyPrecipitation
+            ? dailyPrecipitation
+            : _sum(hours.map((h) => h.precip));
+    final intensities =
+        hours
+            .map((hour) => hour.precipitationIntensity)
+            .whereType<double>()
+            .where((value) => value.isFinite && value >= 0)
+            .toList();
+    final maximumIntensity =
+        intensities.isEmpty ? null : intensities.reduce(math.max);
+    final remaining = selected == today;
+    final probabilityLabel = remaining ? '剩余时段最高逐小时概率' : '当日最高逐小时概率';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -280,17 +428,26 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
                     ],
                   ),
                 ),
-                ForecastTemperatureChart(
-                  key: ValueKey((selected, feelsLike)),
-                  hours: hours,
-                  feelsLike: feelsLike,
-                  date: selected,
-                  now: now,
-                  utcOffset: widget.utcOffset,
-                  selectedHour: selectedHour,
-                  showTooltip: false,
-                  onHourSelected:
-                      (hour) => setState(() => _selectedHour = hour),
+                _chartPager(
+                  key: const ValueKey('temperature-date-swipe'),
+                  controller: _temperaturePages,
+                  height: 220,
+                  builder:
+                      (date) => ForecastTemperatureChart(
+                        key: ValueKey((date, feelsLike)),
+                        hours: _hoursForDate(date, now),
+                        feelsLike: feelsLike,
+                        date: date,
+                        now: now,
+                        utcOffset: widget.utcOffset,
+                        selectedHour: date == selected ? selectedHour : null,
+                        showTooltip: false,
+                        onHourSelected: (hour) {
+                          if (date == selected) {
+                            setState(() => _selectedHour = hour);
+                          }
+                        },
+                      ),
                 ),
               ],
             );
@@ -315,45 +472,72 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
         ),
         const SizedBox(height: 28),
         Text(
-          '降雨概率',
+          '降水概率',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
         Text(
-          '$probabilityDay概率：${detailNumber(probability, '%')}',
+          '$probabilityLabel：${detailNumber(probability, '%')}',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 14),
-        PrecipitationProbabilityChart(hours: hours),
+        _chartPager(
+          key: const ValueKey('precipitation-date-swipe'),
+          controller: _precipitationPages,
+          height: 250,
+          builder:
+              (date) => PrecipitationProbabilityChart(
+                hours: _hoursForDate(date, now),
+                utcOffset: widget.utcOffset,
+              ),
+        ),
         Padding(
           padding: const EdgeInsets.only(top: 14),
           child: Text(
-            '每日降雨概率通常比逐小时概率高。',
+            '以上为逐小时降水概率，不代表全天发生降水的概率。',
             style: TextStyle(color: colors.onSurfaceVariant),
           ),
         ),
         DetailSection(
-          title: '降雨总量',
-          child: Row(
+          title: '降水明细',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.water_drop, color: colors.primary, size: 18),
-              const SizedBox(width: 14),
-              const Expanded(child: Text('降雨', style: TextStyle(fontSize: 18))),
-              Text(
+              _precipitationReading(
+                hasDailyPrecipitation ? '白天与夜间累计' : '已获取时段累计',
                 detailNumber(precipitation, ' 毫米'),
-                style: TextStyle(fontSize: 20, color: colors.primary),
               ),
+              if (day?.details != null) ...[
+                _precipitationReading(
+                  '白天降水概率',
+                  detailNumber(day!.details!.daytime.probability, '%'),
+                ),
+                _precipitationReading(
+                  '夜间降水概率',
+                  detailNumber(day.details!.nighttime.probability, '%'),
+                ),
+              ],
+              _precipitationReading(
+                '已获取时段最大强度',
+                detailNumber(maximumIntensity, ' 毫米/小时'),
+              ),
+              _precipitationReading('降水类型', _precipitationTypes(hours)),
+              if (showLive)
+                _precipitationReading(
+                  '最近一小时实况',
+                  detailNumber(widget.weather!.precip, ' 毫米'),
+                ),
             ],
           ),
         ),
         DetailSection(
-          title: '每日摘要',
+          title: remaining ? '剩余时段摘要' : '每日摘要',
           child: Text(
-            _dailySummary(hours, precipitation, probability),
+            _dailySummary(hours, probability, remaining: remaining),
             style: const TextStyle(fontSize: 18, height: 1.55),
           ),
         ),
@@ -379,16 +563,13 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
           SizedBox(
             width: 64,
             child: Semantics(
+              button: true,
+              label:
+                  '${date.month}月${date.day}日 星期${weekdays[date.weekday - 1]}',
               selected: date == selected,
               child: InkWell(
                 borderRadius: BorderRadius.circular(24),
-                onTap: () {
-                  if (selected == date) return;
-                  setState(() {
-                    selected = date;
-                    _selectedHour = null;
-                  });
-                },
+                onTap: () => _selectDate(date),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Column(
@@ -424,6 +605,30 @@ class _ForecastDetailSheetState extends State<ForecastDetailSheet> {
       ],
     ),
   );
+}
+
+Widget _precipitationReading(String label, String value) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 7),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(child: Text(label)),
+      const SizedBox(width: 12),
+      Flexible(child: Text(value, textAlign: TextAlign.right)),
+    ],
+  ),
+);
+
+String _precipitationTypes(List<HourlyWeatherModel> hours) {
+  final types =
+      hours
+          .map((hour) => hour.precipitationType)
+          .whereType<String>()
+          .where((type) => type.isNotEmpty && type != '未知')
+          .toSet();
+  if (types.isEmpty) return '暂无数据';
+  if (types.length > 1) types.remove('无降水');
+  return types.join('、');
 }
 
 String _temperatureEmptyMessage(bool feelsLike) =>
@@ -621,8 +826,8 @@ class _ForecastTemperatureChartState extends State<ForecastTemperatureChart> {
               runs.isEmpty
                   ? _temperatureEmptyMessage(widget.feelsLike)
                   : widget.feelsLike
-                  ? '体感温度曲线，灰线为实际温度，点击有数据的时段查看详情'
-                  : '实际气温曲线，点击有数据的时段查看详情',
+                  ? '体感温度曲线，灰线为实际温度，点按或长按拖动查看时段，左右轻扫切换日期'
+                  : '实际气温曲线，点按或长按拖动查看时段，左右轻扫切换日期',
           child: SizedBox(
             height: chartHeight,
             child: Stack(
@@ -630,8 +835,9 @@ class _ForecastTemperatureChartState extends State<ForecastTemperatureChart> {
               children: [
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) => select(details.localPosition),
-                  onHorizontalDragUpdate:
+                  onTapUp: (details) => select(details.localPosition),
+                  onLongPressStart: (details) => select(details.localPosition),
+                  onLongPressMoveUpdate:
                       (details) => select(details.localPosition),
                   child: CustomPaint(
                     size: Size(constraints.maxWidth, chartHeight),
@@ -724,32 +930,11 @@ List<List<HourlyWeatherModel>> _temperatureRuns(
   List<HourlyWeatherModel> timeline,
   bool feelsLike,
   Duration? offset,
-) {
-  final runs = <List<HourlyWeatherModel>>[];
-  List<HourlyWeatherModel>? current;
-  for (final hour in timeline) {
-    final value = feelsLike ? hour.feelsLike : hour.temp;
-    if (value?.isFinite != true) {
-      current = null;
-      continue;
-    }
-    if (current != null) {
-      final gap = _forecastInstant(
-        hour,
-        offset,
-      ).difference(_forecastInstant(current.last, offset));
-      if (gap <= Duration.zero || gap > const Duration(hours: 1, minutes: 1)) {
-        current = null;
-      }
-    }
-    if (current == null) {
-      current = <HourlyWeatherModel>[];
-      runs.add(current);
-    }
-    current.add(hour);
-  }
-  return runs;
-}
+) => forecastRuns(
+  timeline,
+  value: (hour) => feelsLike ? hour.feelsLike : hour.temp,
+  utcOffset: offset,
+);
 
 const _temperatureStops = [-20.0, 0.0, 10.0, 20.0, 25.0, 30.0, 35.0, 45.0];
 const _lightTemperatureColors = [
@@ -979,13 +1164,30 @@ Rect _probabilityPlot(Size size) =>
 
 class PrecipitationProbabilityChart extends StatelessWidget {
   final List<HourlyWeatherModel> hours;
-  const PrecipitationProbabilityChart({super.key, required this.hours});
+  final Duration? utcOffset;
+  const PrecipitationProbabilityChart({
+    super.key,
+    required this.hours,
+    this.utcOffset,
+  });
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final empty = !hours.any((hour) => hour.pop?.isFinite == true);
+    final timeline = List<HourlyWeatherModel>.of(hours)..sort(
+      (a, b) => _forecastInstant(
+        a,
+        utcOffset,
+      ).compareTo(_forecastInstant(b, utcOffset)),
+    );
+    final runs = forecastRuns(
+      timeline,
+      value:
+          (hour) => validPrecipitationProbability(hour.pop) ? hour.pop : null,
+      utcOffset: utcOffset,
+    );
+    final empty = runs.isEmpty;
     return Semantics(
-      label: empty ? '暂无当日降雨概率数据' : '所选日期降雨概率曲线',
+      label: empty ? '暂无当日降水概率数据' : '所选日期降水概率曲线',
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, 250);
@@ -998,7 +1200,7 @@ class PrecipitationProbabilityChart extends StatelessWidget {
                 CustomPaint(
                   size: size,
                   painter: _ProbabilityPainter(
-                    hours: hours,
+                    runs: runs,
                     foreground: colors.onSurfaceVariant,
                     grid: colors.outlineVariant,
                     line: const Color(0xFF35C9F4),
@@ -1010,7 +1212,7 @@ class PrecipitationProbabilityChart extends StatelessWidget {
                   Positioned.fromRect(
                     rect: plot,
                     child: const _ForecastChartEmptyState(
-                      message: '暂无当日降雨概率数据',
+                      message: '暂无当日降水概率数据',
                     ),
                   ),
               ],
@@ -1023,11 +1225,11 @@ class PrecipitationProbabilityChart extends StatelessWidget {
 }
 
 class _ProbabilityPainter extends CustomPainter {
-  final List<HourlyWeatherModel> hours;
+  final List<List<HourlyWeatherModel>> runs;
   final Color foreground, grid, line;
   final String? fontFamily;
   _ProbabilityPainter({
-    required this.hours,
+    required this.runs,
     required this.foreground,
     required this.grid,
     required this.line,
@@ -1066,38 +1268,38 @@ class _ProbabilityPainter extends CustomPainter {
         labelStyle,
       );
     }
-    final points = <Offset>[];
-    for (final hour in hours) {
-      if (hour.pop?.isFinite != true) continue;
-      points.add(
-        Offset(
-          width * (hour.time.hour + hour.time.minute / 60) / 24,
-          top + height * (1 - hour.pop!.clamp(0, 100) / 100),
-        ),
+    for (final run in runs) {
+      final points =
+          run
+              .map(
+                (hour) => Offset(
+                  width * (hour.time.hour + hour.time.minute / 60) / 24,
+                  top + height * (1 - hour.pop! / 100),
+                ),
+              )
+              .toList();
+      final path = Path()..moveTo(points.first.dx, points.first.dy);
+      for (final point in points.skip(1)) {
+        path.lineTo(point.dx, point.dy);
+      }
+      final area =
+          Path.from(path)
+            ..lineTo(points.last.dx, top + height)
+            ..lineTo(points.first.dx, top + height)
+            ..close();
+      canvas.drawPath(area, Paint()..color = line.withValues(alpha: .22));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = line
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round,
       );
-    }
-    if (points.isEmpty) return;
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (final point in points.skip(1)) {
-      path.lineTo(point.dx, point.dy);
-    }
-    final area =
-        Path.from(path)
-          ..lineTo(points.last.dx, top + height)
-          ..lineTo(points.first.dx, top + height)
-          ..close();
-    canvas.drawPath(area, Paint()..color = line.withValues(alpha: .22));
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = line
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round,
-    );
-    if (points.length == 1) {
-      canvas.drawCircle(points.first, 3, Paint()..color = line);
+      if (points.length == 1) {
+        canvas.drawCircle(points.first, 3, Paint()..color = line);
+      }
     }
   }
 
@@ -1111,7 +1313,11 @@ class _ProbabilityPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ProbabilityPainter old) =>
-      old.hours != hours || old.foreground != foreground || old.grid != grid;
+      old.runs != runs ||
+      old.foreground != foreground ||
+      old.grid != grid ||
+      old.line != line ||
+      old.fontFamily != fontFamily;
 }
 
 double? _sum(Iterable<double?> values) {
@@ -1123,9 +1329,9 @@ double? _sum(Iterable<double?> values) {
 
 String _dailySummary(
   List<HourlyWeatherModel> hours,
-  double? precipitation,
-  double? probability,
-) {
+  double? probability, {
+  required bool remaining,
+}) {
   if (hours.isEmpty) return '暂无当日天气数据';
   final descriptions = <String, int>{};
   for (final text in hours
@@ -1147,9 +1353,9 @@ String _dailySummary(
           : '，气温 ${temperatures.reduce(math.min).round()}° 至 ${temperatures.reduce(math.max).round()}°';
   final rain =
       probability == null
-          ? '，降雨概率暂无数据'
+          ? '，降水概率暂无数据'
           : probability <= 0
-          ? '，预计没有降雨'
-          : '，最高降雨概率 ${probability.round()}%，预计降雨总量${precipitation == null ? '暂无数据' : ' ${detailNumber(precipitation, ' 毫米')}'}';
-  return '当天以$description为主$range$rain。';
+          ? '，逐小时降水概率为 0%'
+          : '，最高逐小时降水概率 ${probability.round()}%';
+  return '${remaining ? '剩余时段' : '已获取时段'}以$description为主$range$rain。';
 }

@@ -25,12 +25,10 @@ class CurrentCityWeather extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 城市名称
         Text(
           cityName,
           style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w400),
         ),
-        // 天气信息
         CurrentWeatherInfo(weather: weather, dailyForecast: dailyForecast),
       ],
     );

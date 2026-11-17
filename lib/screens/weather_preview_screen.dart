@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/weather_scene.dart';
 
-/// Local-only controls using the same painter as the weather home screen.
 class WeatherPreviewScreen extends StatefulWidget {
   const WeatherPreviewScreen({super.key});
 

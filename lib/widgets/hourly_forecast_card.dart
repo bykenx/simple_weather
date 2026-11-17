@@ -67,9 +67,7 @@ class HourlyForecastCard extends StatelessWidget {
                     hours.map((hour) {
                       final time = hour.time;
                       final label =
-                          hour == hours.first
-                              ? '现在'
-                              : time.hour == 0
+                          time.hour == 0
                               ? '${time.month}/${time.day}'
                               : '${time.hour}时';
                       return SizedBox(

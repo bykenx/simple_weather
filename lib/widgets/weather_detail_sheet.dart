@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utils/app_theme.dart';
 
+const weatherDetailHorizontalPadding = 20.0;
+
 Future<void> showWeatherDetailSheet(
   BuildContext context, {
   required String title,
@@ -66,9 +68,9 @@ Future<void> showWeatherDetailSheet(
                       ),
                       SliverPadding(
                         padding: EdgeInsets.fromLTRB(
-                          20,
+                          weatherDetailHorizontalPadding,
                           0,
-                          20,
+                          weatherDetailHorizontalPadding,
                           24 + MediaQuery.paddingOf(context).bottom,
                         ),
                         sliver: SliverToBoxAdapter(child: child),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../widgets/weather_bottom_bar.dart';
 import '../utils/url.dart';
 import '../widgets/weather_refresh_indicator.dart';
@@ -30,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _index = 0;
   bool _configured = false;
   bool _initializing = true;
+  String? _initializationError;
+  Timer? _timeRefresh;
 
   @override
   void initState() {
@@ -37,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _weather = widget.controller ?? WeatherLoadController();
     _weather.addListener(_changed);
     WidgetsBinding.instance.addObserver(this);
+    _startClock();
     _initialize();
   }
 
@@ -44,12 +49,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
+  void _startClock() {
+    _timeRefresh?.cancel();
+    _timeRefresh = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _changed(),
+    );
+  }
+
   Future<void> _initialize() async {
-    final configured = await _settings.isSettingsComplete();
-    if (!mounted) return;
-    setState(() => _configured = configured);
-    await _loadCities();
-    if (mounted) setState(() => _initializing = false);
+    setState(() {
+      _initializing = true;
+      _initializationError = null;
+    });
+    try {
+      final configured = await _settings.isSettingsComplete();
+      if (!mounted) return;
+      setState(() => _configured = configured);
+      await _loadCities();
+    } catch (_) {
+      if (mounted) _initializationError = '暂时无法读取本地数据，请重试';
+    } finally {
+      if (mounted) setState(() => _initializing = false);
+    }
   }
 
   Future<void> _loadCities() async {
@@ -78,12 +100,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshIfNeeded() async {
     if (!_configured || _cities.isEmpty) return;
     final city = _cities[_index];
-    if (_weather.data(city).isExpired) await _weather.refresh(city);
+    await _weather.refreshIfNeeded(city);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshIfNeeded();
+    if (state == AppLifecycleState.resumed) {
+      _changed();
+      _startClock();
+      _refreshIfNeeded();
+    } else {
+      _timeRefresh?.cancel();
+      unawaited(_weather.flush());
+    }
   }
 
   Future<void> _manage() async {
@@ -127,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _timeRefresh?.cancel();
     _weather.removeListener(_changed);
     if (widget.controller == null) _weather.dispose();
     _pages.dispose();
@@ -141,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final scene = WeatherScene.fromWeather(
       _weather.data(_cities[_index]).weather,
       utcOffset: _weather.data(_cities[_index]).utcOffset,
+      daily: _weather.data(_cities[_index]).detailDays.firstOrNull,
     );
     final base = Theme.of(context);
     final dark = base.brightness == Brightness.dark;
@@ -209,6 +240,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body:
           _initializing
               ? const Center(child: WeatherLoadingDots())
+              : _initializationError != null
+              ? WeatherLoadingFailedView(
+                errorMessage: _initializationError,
+                onRetry: _initialize,
+              )
               : !_configured
               ? SettingNotCompleteView(onSettings: _configure)
               : _cities.isEmpty

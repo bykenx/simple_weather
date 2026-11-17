@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// 空气质量工具类，用于处理AQI相关的计算和转换
-/// 
 /// 当前只处理中国（cn-mee）的空气质量数据
 class AirQualityUtils {
   static int getAqiLevel(double aqi) {

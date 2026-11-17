@@ -17,6 +17,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _settingsService = SettingsService();
   bool _isLoading = true;
   bool _isEdited = false;
+  bool _saving = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -25,18 +27,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    await _settingsService.ensureInitialized();
-    final apiKey = await _settingsService.getApiKey();
-    final apiHost = await _settingsService.getApiHost();
-    setState(() {
-      _apiKeyController.text = apiKey ?? '';
-      _apiHostController.text = apiHost ?? '';
-      _isLoading = false;
-    });
+    try {
+      await _settingsService.ensureInitialized();
+      final apiKey = await _settingsService.getApiKey();
+      final apiHost = await _settingsService.getApiHost();
+      if (!mounted) return;
+      setState(() {
+        _apiKeyController.text = apiKey ?? '';
+        _apiHostController.text = apiHost ?? '';
+        _isLoading = false;
+        _loadError = null;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = '暂时无法读取设置，请重试';
+        });
+      }
+    }
   }
 
   Future<void> _saveSettings() async {
-    if (_formKey.currentState!.validate()) {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
       await _settingsService.setApiKey(_apiKeyController.text);
       await _settingsService.setApiHost(_apiHostController.text);
       if (mounted) {
@@ -48,6 +63,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ).showSnackBar(const SnackBar(content: Text('设置已保存')));
         Navigator.pop(context, true);
       }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('设置保存失败，请重试')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -122,6 +145,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child:
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
+                    : _loadError != null
+                    ? Center(
+                      child: Column(
+                        children: [
+                          Text(_loadError!),
+                          TextButton(
+                            onPressed: _loadSettings,
+                            child: const Text('重试'),
+                          ),
+                        ],
+                      ),
+                    )
                     : SafeArea(
                       child: SingleChildScrollView(
                         child: Padding(
@@ -174,6 +209,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 8),
                                 TextFormField(
                                   controller: _apiKeyController,
+                                  obscureText: true,
+                                  autocorrect: false,
+                                  enableSuggestions: false,
                                   decoration: const InputDecoration(
                                     hintText: '请输入API密钥',
                                     border: OutlineInputBorder(),
@@ -270,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: _saveSettings,
+                                    onPressed: _saving ? null : _saveSettings,
                                     child: const Text('保存'),
                                   ),
                                 ),
