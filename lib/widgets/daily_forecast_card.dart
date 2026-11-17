@@ -9,12 +9,14 @@ import 'weather_card_surface.dart';
 class DailyForecastCard extends StatelessWidget {
   final List<DailyWeatherModel> dailyForecast;
   final CityModel currentCity;
+  final DateTime? now;
   final ValueChanged<DateTime> onDayTap;
 
   const DailyForecastCard({
     super.key,
     required this.dailyForecast,
     required this.currentCity,
+    this.now,
     required this.onDayTap,
   });
 
@@ -71,7 +73,7 @@ class DailyForecastCard extends StatelessWidget {
                         SizedBox(
                           width: 48,
                           child: Text(
-                            WeatherDateUtils.getDateText(day.date),
+                            WeatherDateUtils.getDateText(day.date, now: now),
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),

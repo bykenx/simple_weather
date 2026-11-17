@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
+import '../utils/weather_time.dart';
 import '../utils/weather_icon.dart';
 import 'weather_detail_sheet.dart';
 
-DateTime forecastDate(DateTime value) =>
-    DateTime(value.year, value.month, value.day);
+DateTime forecastDate(DateTime value) => WeatherTimeUtils.date(value);
 
 class ForecastDetailSheet extends StatefulWidget {
   final List<DailyWeatherModel> days;

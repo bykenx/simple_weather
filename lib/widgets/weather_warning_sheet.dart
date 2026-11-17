@@ -2,26 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/weather_model.dart';
+import '../utils/weather_time.dart';
 import '../utils/warning_colors.dart';
 import '../utils/weather_icon.dart';
 import 'weather_detail_sheet.dart';
 
 Future<void> showWeatherWarningSheet(
   BuildContext context,
-  WeatherWarningModel warning,
-) => showWeatherDetailSheet(
+  WeatherWarningModel warning, {
+  Duration? utcOffset,
+}) => showWeatherDetailSheet(
   context,
   title: '天气预警',
   icon: Icons.warning_amber_rounded,
-  child: WeatherWarningSheet(warning: warning),
+  child: WeatherWarningSheet(warning: warning, utcOffset: utcOffset),
 );
 
 class WeatherWarningSheet extends StatelessWidget {
   final WeatherWarningModel warning;
-  const WeatherWarningSheet({super.key, required this.warning});
+  final Duration? utcOffset;
+  const WeatherWarningSheet({super.key, required this.warning, this.utcOffset});
 
-  String _formatDateTime(DateTime value) =>
-      DateFormat('yyyy-MM-dd HH:mm').format(value);
+  String _formatDateTime(DateTime value) => DateFormat(
+    'yyyy-MM-dd HH:mm',
+  ).format(WeatherTimeUtils.atOffset(value, warning.utcOffset ?? utcOffset));
 
   @override
   Widget build(BuildContext context) {

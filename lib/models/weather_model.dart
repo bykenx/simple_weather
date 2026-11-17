@@ -1,4 +1,5 @@
 import 'daily_forecast_details.dart';
+import '../utils/weather_time.dart';
 
 class DailyWeatherModel {
   final DateTime date;
@@ -37,7 +38,7 @@ class DailyWeatherModel {
       final day = details.daytime;
       final astro = details.astro;
       return DailyWeatherModel(
-        date: DateTime.parse(
+        date: WeatherTimeUtils.parseWallClock(
           json['forecastStartTime'].toString().substring(0, 10),
         ),
         details: details,
@@ -60,7 +61,7 @@ class DailyWeatherModel {
       );
     }
     return DailyWeatherModel(
-      date: DateTime.parse(json['fxDate']),
+      date: WeatherTimeUtils.parseWallClock(json['fxDate'].toString()),
       windDir: json['windDirDay']?.toString(),
       windScale: json['windScaleDay']?.toString(),
       sunrise: json['sunrise']?.toString(),
@@ -79,7 +80,7 @@ class DailyWeatherModel {
   Map<String, dynamic> toJson() {
     return {
       if (details != null) ...details!.json,
-      'fxDate': date.toIso8601String(),
+      'fxDate': date.toIso8601String().substring(0, 10),
       'windDirDay': windDir,
       'windScaleDay': windScale,
       'sunrise': sunrise,
@@ -173,7 +174,9 @@ class LiveWeatherModel {
 }
 
 class HourlyWeatherModel {
+  /// City civil time; use its fields directly rather than converting toLocal().
   final DateTime time;
+  final Duration? utcOffset;
   final double temp;
   final String icon;
   final String text;
@@ -197,6 +200,7 @@ class HourlyWeatherModel {
 
   HourlyWeatherModel({
     required this.time,
+    this.utcOffset,
     required this.temp,
     required this.icon,
     required this.text,
@@ -230,6 +234,7 @@ class HourlyWeatherModel {
         // wall-clock portion so a city in another time zone is not shifted to
         // the device's date when grouping the ten-day chart.
         time: _parseForecastWallClock(json['forecastTime']),
+        utcOffset: WeatherTimeUtils.offsetOf(json['forecastTime']?.toString()),
         temp:
             DailyForecastDetails.measurement(json['temperature'], '°C') ??
             double.nan,
@@ -270,6 +275,10 @@ class HourlyWeatherModel {
     }
     return HourlyWeatherModel(
       time: _parseForecastWallClock(json['fxTime']),
+      utcOffset:
+          json['_utcOffsetMinutes'] is int
+              ? Duration(minutes: json['_utcOffsetMinutes'] as int)
+              : WeatherTimeUtils.offsetOf(json['fxTime']?.toString()),
       temp: double.tryParse(json['temp'] ?? '') ?? double.nan,
       icon: json['icon'] ?? '',
       text: json['text'] ?? '',
@@ -313,7 +322,10 @@ class HourlyWeatherModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'fxTime': time.toIso8601String(),
+      // This is already a city clock, not an instant in UTC. Keep cache values
+      // timezone-free so restoring them never shifts them to the device zone.
+      'fxTime': time.toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
+      '_utcOffsetMinutes': utcOffset?.inMinutes,
       'temp': temp.toString(),
       'icon': icon,
       'text': text,
@@ -346,9 +358,7 @@ bool hasTenDayHourlyCoverage(List<HourlyWeatherModel> hours) =>
     hours.every((hour) => hour.feelsLike?.isFinite == true);
 
 DateTime _parseForecastWallClock(dynamic value) {
-  final text = value?.toString() ?? '';
-  if (text.length >= 19) return DateTime.parse(text.substring(0, 19));
-  return DateTime.parse(text);
+  return WeatherTimeUtils.parseWallClock(value?.toString() ?? '');
 }
 
 String _windDirection(String? compass) =>
@@ -397,6 +407,10 @@ class WeatherWarningModel {
   final String id;
   final String sender;
   final DateTime pubTime;
+
+  /// Preserve the publication's local offset while keeping warning instants
+  /// suitable for comparisons such as expiration checks.
+  final Duration? utcOffset;
   final String title;
   final DateTime startTime;
   final DateTime endTime;
@@ -412,6 +426,7 @@ class WeatherWarningModel {
     required this.id,
     required this.sender,
     required this.pubTime,
+    this.utcOffset,
     required this.title,
     required this.startTime,
     required this.endTime,
@@ -429,6 +444,12 @@ class WeatherWarningModel {
       id: json['id'],
       sender: json['sender'],
       pubTime: DateTime.parse(json['pubTime']),
+      utcOffset:
+          json['_utcOffsetMinutes'] is int
+              ? Duration(minutes: json['_utcOffsetMinutes'] as int)
+              : RegExp(r'[+-]\d{2}(?::?\d{2})?$').hasMatch(json['pubTime'])
+              ? WeatherTimeUtils.offsetOf(json['pubTime'])
+              : null,
       title: json['title'],
       startTime: DateTime.parse(json['startTime']),
       endTime: DateTime.parse(json['endTime']),
@@ -447,6 +468,7 @@ class WeatherWarningModel {
       'id': id,
       'sender': sender,
       'pubTime': pubTime.toIso8601String(),
+      '_utcOffsetMinutes': utcOffset?.inMinutes,
       'title': title,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime.toIso8601String(),

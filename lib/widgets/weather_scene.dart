@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/weather_model.dart';
+import '../utils/weather_time.dart';
 import 'moon_renderers.dart';
 
 enum SkyKind {
@@ -23,20 +24,18 @@ class WeatherScene {
   final SkyKind kind;
   final bool night;
   const WeatherScene(this.kind, this.night);
-  factory WeatherScene.fromWeather(LiveWeatherModel? weather, {DateTime? now}) {
+  factory WeatherScene.fromWeather(
+    LiveWeatherModel? weather, {
+    DateTime? now,
+    Duration? utcOffset,
+  }) {
     final code = int.tryParse(weather?.icon ?? '') ?? 999;
     // Night-specific provider icons take priority; other codes use the city's
     // observation offset, rather than the phone's local timezone.
-    final match = RegExp(
-      r'([+-])(\d{2}):(\d{2})$',
-    ).firstMatch(weather?.obsTime ?? '');
-    var local = (now ?? DateTime.now()).toUtc();
-    if (match != null) {
-      final offset = int.parse(match[2]!) * 60 + int.parse(match[3]!);
-      local = local.add(Duration(minutes: match[1] == '-' ? -offset : offset));
-    } else {
-      local = (now ?? DateTime.now()).toLocal();
-    }
+    final local = WeatherTimeUtils.atOffset(
+      now ?? DateTime.now(),
+      WeatherTimeUtils.offsetOf(weather?.obsTime) ?? utcOffset,
+    );
     final night =
         {150, 151, 152, 153, 350, 351, 456, 457}.contains(code) ||
         local.hour < 6 ||

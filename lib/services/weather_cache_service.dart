@@ -38,7 +38,7 @@ class WeatherCacheService {
       }
       await prefs.setString(
         '${_weatherCacheKey}_$cityKey',
-        jsonEncode({'modules': modules}),
+        jsonEncode({'hourlyTimeVersion': 1, 'modules': modules}),
       );
     } catch (e) {
       if (kDebugMode) print('缓存保存错误: $e');
@@ -148,6 +148,13 @@ class WeatherCacheService {
                       ? null
                       : cacheData['data'][legacyKeys[m]]);
           if (raw == null) continue;
+          if (m == WeatherModule.hourly &&
+              cacheData['hourlyTimeVersion'] != 1) {
+            // Old minute-precision timestamps could be shifted to UTC before
+            // saving, losing the original clock and offset. Reload this module
+            // rather than displaying an ambiguous cached forecast.
+            continue;
+          }
           final state = weatherData.module(m);
           state.data = switch (m) {
             WeatherModule.live => LiveWeatherModel.fromJson(raw),

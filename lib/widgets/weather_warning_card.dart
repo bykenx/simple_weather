@@ -6,8 +6,9 @@ import 'weather_warning_sheet.dart';
 
 class WeatherWarningCard extends StatefulWidget {
   final List<WeatherWarningModel> warnings;
+  final Duration? utcOffset;
 
-  const WeatherWarningCard({super.key, required this.warnings});
+  const WeatherWarningCard({super.key, required this.warnings, this.utcOffset});
 
   @override
   State<WeatherWarningCard> createState() => _WeatherWarningCardState();
@@ -51,6 +52,7 @@ class _WeatherWarningCardState extends State<WeatherWarningCard> {
             () => showWeatherWarningSheet(
               context,
               widget.warnings[safePageIndex],
+              utcOffset: widget.utcOffset,
             ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

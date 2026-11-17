@@ -101,8 +101,7 @@ class _HourlyTrendChartState extends State<HourlyTrendChart> {
 }
 
 String _time(DateTime time) {
-  final local = time.toLocal();
-  return '${local.month}/${local.day} ${local.hour.toString().padLeft(2, '0')}:00';
+  return '${time.month}/${time.day} ${time.hour.toString().padLeft(2, '0')}:00';
 }
 
 class _TrendPainter extends CustomPainter {
@@ -183,10 +182,10 @@ class _TrendPainter extends CustomPainter {
       final x =
           left +
           (hours.length == 1 ? width / 2 : width * i / (hours.length - 1));
-      final local = hours[i].time.toLocal();
+      final time = hours[i].time;
       _label(
         canvas,
-        '${local.hour}:00',
+        '${time.hour}:00',
         Offset((x - 14).clamp(left, size.width - 32), 140),
       );
     }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/city_weather_data.dart';
 import '../models/weather_module.dart';
+import '../utils/weather_time.dart';
 import 'air_quality_card.dart';
 import 'forecast_detail_sheet.dart';
 import 'weather_detail_sheet.dart';
@@ -36,7 +37,7 @@ class WeatherContentView extends StatelessWidget {
     final timestamp =
         updates.isEmpty
             ? '尚未更新'
-            : '最近更新于 ${DateFormat('MM-dd HH:mm').format(updates.last.toLocal())}';
+            : '最近更新于 ${DateFormat('MM-dd HH:mm').format(WeatherTimeUtils.atOffset(updates.last, data.utcOffset))}';
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
       sliver: SliverList.list(
@@ -125,6 +126,7 @@ class WeatherContentView extends StatelessWidget {
           content = DailyForecastCard(
             dailyForecast: data.dailyForecast!,
             currentCity: data.city,
+            now: WeatherTimeUtils.atOffset(DateTime.now(), data.utcOffset),
             onDayTap: (date) => _openForecast(context, date),
           );
         }
@@ -142,7 +144,10 @@ class WeatherContentView extends StatelessWidget {
                 ?.where((w) => w.endTime.isAfter(DateTime.now()))
                 .toList();
         if (active?.isNotEmpty == true) {
-          content = WeatherWarningCard(warnings: active!);
+          content = WeatherWarningCard(
+            warnings: active!,
+            utcOffset: data.utcOffset,
+          );
         }
       case WeatherModule.airQuality:
         if (data.airQuality?.code == 'cn-mee') {

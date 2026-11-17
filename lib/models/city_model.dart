@@ -4,6 +4,7 @@ class CityModel {
   final String? adm1;
   final String? adm2;
   final String? country;
+  final String? utcOffset;
   final double? lat;
   final double? lon;
 
@@ -13,6 +14,7 @@ class CityModel {
     this.adm1,
     this.adm2,
     this.country,
+    this.utcOffset,
     this.lat,
     this.lon,
   });
@@ -24,6 +26,7 @@ class CityModel {
       adm1: json['adm1'],
       adm2: json['adm2'],
       country: json['country'],
+      utcOffset: json['utcOffset']?.toString(),
       lat: double.tryParse(json['lat']?.toString() ?? ''),
       lon: double.tryParse(json['lon']?.toString() ?? ''),
     );
@@ -36,6 +39,7 @@ class CityModel {
       'adm1': adm1,
       'adm2': adm2,
       'country': country,
+      'utcOffset': utcOffset,
       'lat': lat?.toString(),
       'lon': lon?.toString(),
     };

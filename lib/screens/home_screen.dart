@@ -140,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     final scene = WeatherScene.fromWeather(
       _weather.data(_cities[_index]).weather,
+      utcOffset: _weather.data(_cities[_index]).utcOffset,
     );
     final base = Theme.of(context);
     final dark = base.brightness == Brightness.dark;
